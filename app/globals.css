@@ -43,19 +43,15 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   color: var(--ink);
   display: inline-flex;
   align-items: center;
-  gap: 11px;
+  gap: 10px;
   text-decoration: none;
-  font-family: Georgia, serif;
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: .2em;
+  text-transform: uppercase;
 }
 
-.brand-mark { position: relative; width: 28px; height: 31px; display: inline-block; }
-.brand-mark i { position: absolute; display: block; width: 13px; height: 20px; border-radius: 100% 0 100% 0; background: var(--moss); }
-.brand-mark i:nth-child(1) { left: 1px; bottom: 0; transform: rotate(-18deg); }
-.brand-mark i:nth-child(2) { right: 1px; bottom: 0; transform: rotate(108deg); background: #82a17f; }
-.brand-mark i:nth-child(3) { left: 8px; top: 0; transform: rotate(43deg) scale(.8); background: var(--sun); }
+.brand-mark { width: 39px; height: 39px; display: block; object-fit: contain; }
 
 .avatar {
   width: 38px;
@@ -372,6 +368,8 @@ h3 { font-family: Georgia, serif; font-size: 24px; font-weight: 500; margin: 24p
 @media (max-width: 780px) {
   .app-shell { padding-bottom: 84px; }
   .topbar { height: 68px; padding: 0 20px; }
+  .brand { gap: 8px; font-size: 13px; letter-spacing: .16em; }
+  .brand-mark { width: 36px; height: 36px; }
   .app-page { padding: 0 16px 28px; }
   .welcome-card { min-height: 500px; grid-template-columns: 1fr; padding: 36px 26px 25px; border-radius: 26px; }
   .welcome-copy { z-index: 3; }

@@ -15,14 +15,14 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'Happy Body',
-    description: 'Understand your body. Discover your next step.',
+    description: 'Move freely. Live fully.',
     type: 'website',
-    images: [{ url: './og.png', width: 1731, height: 909, alt: 'Happy Body — Understand your body. Discover your next step.' }],
+    images: [{ url: './og.png', width: 1734, height: 907, alt: 'Happy Body — Move freely. Live fully.' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Happy Body',
-    description: 'Understand your body. Discover your next step.',
+    description: 'Move freely. Live fully.',
     images: ['./og.png'],
   },
   appleWebApp: { capable: true, title: 'Happy Body', statusBarStyle: 'default' },

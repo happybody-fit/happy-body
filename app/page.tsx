@@ -162,7 +162,7 @@ export default function Home() {
 function Brand() {
   return (
     <span className="brand">
-      <span className="brand-mark" aria-hidden="true"><i /><i /><i /></span>
+      <img className="brand-mark" src="./logo-mark.png" alt="" aria-hidden="true" />
       <span>Happy Body</span>
     </span>
   );
