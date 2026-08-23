@@ -3,6 +3,8 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { pathwayById, pathways } from '@/data/pathways';
 import { browserProgressRepository, defaultProgress, isPathwayId } from '@/lib/storage';
+import { useProgressSync } from '@/lib/use-progress-sync';
+import type { ProgressSync } from '@/lib/use-progress-sync';
 import type { PathwayId, PracticeEntry, ScreenId, UserProgress } from '@/lib/types';
 
 const navItems: { id: ScreenId; label: string; shortLabel: string; icon: string }[] = [
@@ -29,9 +31,13 @@ export default function Home() {
   const [assessmentAnswers, setAssessmentAnswers] = useState<Record<string, boolean>>({});
   const [assessmentResult, setAssessmentResult] = useState<number | null>(null);
   const [showPracticeForm, setShowPracticeForm] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
   const [savedMessage, setSavedMessage] = useState('');
+  const sync = useProgressSync(progress, setProgress, ready);
 
   useEffect(() => {
+    // localStorage is intentionally read after hydration so server and client markup match.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setProgress(browserProgressRepository.load());
     setReady(true);
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => undefined);
@@ -47,8 +53,6 @@ export default function Home() {
 
   const activePathway = pathwayById[activePathwayId];
   const currentLevelIndex = progress.currentLevels[activePathwayId] ?? 0;
-  const currentLevel = activePathway.levels[currentLevelIndex];
-  const nextLevel = activePathway.levels[Math.min(currentLevelIndex + 1, activePathway.levels.length - 1)];
 
   const navigate = (nextScreen: ScreenId, pathwayId?: PathwayId) => {
     if (pathwayId) setActivePathwayId(pathwayId);
@@ -116,7 +120,7 @@ export default function Home() {
 
   return (
     <main className="app-shell">
-      <Header screen={screen} navigate={navigate} />
+      <Header screen={screen} navigate={navigate} sync={sync} openAccount={() => setShowAccount(true)} />
       <div className="app-page">
         {screen === 'dashboard' && <Dashboard progress={progress} navigate={navigate} startAssessment={startAssessment} />}
         {screen === 'goals' && <Goals progress={progress} toggleGoal={toggleGoal} startAssessment={startAssessment} navigate={navigate} />}
@@ -154,6 +158,7 @@ export default function Home() {
           save={savePractice}
         />
       )}
+      {showAccount && <AccountDialog sync={sync} close={() => setShowAccount(false)} />}
       {savedMessage && <div className="toast" role="status">✓ {savedMessage}</div>}
     </main>
   );
@@ -162,13 +167,15 @@ export default function Home() {
 function Brand() {
   return (
     <span className="brand">
+      {/* eslint-disable-next-line @next/next/no-img-element -- the small local PWA mark is already optimized */}
       <img className="brand-mark" src="./logo-mark.png" alt="" aria-hidden="true" />
       <span>Happy Body</span>
     </span>
   );
 }
 
-function Header({ screen, navigate }: { screen: ScreenId; navigate: (screen: ScreenId) => void }) {
+function Header({ screen, navigate, sync, openAccount }: { screen: ScreenId; navigate: (screen: ScreenId) => void; sync: ProgressSync; openAccount: () => void }) {
+  const initial = sync.user?.email?.slice(0, 1).toUpperCase() ?? 'A';
   return (
     <header className="topbar">
       <button className="brand-button" onClick={() => navigate('dashboard')} aria-label="Happy Body home"><Brand /></button>
@@ -177,7 +184,9 @@ function Header({ screen, navigate }: { screen: ScreenId; navigate: (screen: Scr
           <button key={item.id} className={screen === item.id ? 'active' : ''} onClick={() => navigate(item.id)}>{item.label}</button>
         ))}
       </nav>
-      <button className="avatar" aria-label="Profile placeholder">A</button>
+      <button className={`avatar sync-${sync.status}`} onClick={openAccount} aria-label={`Account and progress sync: ${sync.status}`}>
+        {initial}<span className="sync-dot" aria-hidden="true" />
+      </button>
     </header>
   );
 }
@@ -348,7 +357,7 @@ function Assessment({
         </section>
       ) : (
         <section className="result-card">
-          <span className="result-flower">✦</span><p className="eyebrow">YOUR CURRENT STARTING POINT</p><h1>{pathway.levels[result].title}</h1><p>{pathway.levels[result].description}</p><div className="result-path"><span>Today</span>{pathway.levels.map((level, index) => <i key={level.id} className={index <= result ? 'filled' : ''} title={level.title} />)}<span>{pathway.destination}</span></div><div className="result-actions"><button className="primary-button" onClick={() => navigate('next-step', pathwayId)}>Discover my next step →</button><button className="secondary-button" onClick={restart}>Repeat assessment</button></div><small>Your result is saved on this device and can be updated at any time.</small>
+          <span className="result-flower">✦</span><p className="eyebrow">YOUR CURRENT STARTING POINT</p><h1>{pathway.levels[result].title}</h1><p>{pathway.levels[result].description}</p><div className="result-path"><span>Today</span>{pathway.levels.map((level, index) => <i key={level.id} className={index <= result ? 'filled' : ''} title={level.title} />)}<span>{pathway.destination}</span></div><div className="result-actions"><button className="primary-button" onClick={() => navigate('next-step', pathwayId)}>Discover my next step →</button><button className="secondary-button" onClick={restart}>Repeat assessment</button></div><small>Your result is saved to your journey and syncs when you’re signed in.</small>
         </section>
       )}
     </>
@@ -409,9 +418,83 @@ function Journey({ progress, openPractice, startAssessment }: { progress: UserPr
       <section className="journey-stats"><div><span>{progress.practices.length}</span><small>practices recorded</small></div><div><span>{totalMinutes}</span><small>approx. minutes</small></div><div><span>{progress.assessments.length}</span><small>assessments</small></div><div><span>{progress.milestones.length}</span><small>level changes</small></div></section>
       <div className="journey-layout">
         <section className="timeline-card"><div className="section-heading compact"><div><p className="eyebrow">HISTORY</p><h2>Your recent moments</h2></div></div>{events.length ? <div className="timeline">{events.map((event) => <article key={`${event.type}-${event.id}`}><span className={`timeline-icon ${event.type}`}>{event.type === 'practice' ? '↟' : '◎'}</span><div><time>{formatDate(event.date)}</time><h3>{event.title}</h3><p>{pathwayById[event.pathwayId].name} · {event.detail}</p></div></article>)}</div> : <div className="journey-empty"><span>○</span><h3>Your journey starts with noticing.</h3><p>Record a practice or complete an assessment to create your first entry.</p><button className="secondary-button" onClick={openPractice}>Record practice</button></div>}</section>
-        <aside className="milestones-card"><p className="eyebrow">MILESTONES</p><h2>Moments worth keeping</h2>{progress.milestones.length ? progress.milestones.map((milestone, index) => <div className="milestone-row" key={`${milestone}-${index}`}><span>✦</span><p>{milestone}</p></div>) : <p className="muted-copy">Level changes will appear here after you reassess.</p>}<button className="soft-button" onClick={() => startAssessment(progress.selectedGoals[0] ?? 'squat')}>Repeat an assessment</button><div className="privacy-note"><strong>Private by default</strong><p>Your notes and progress stay in this browser on this device.</p></div></aside>
+        <aside className="milestones-card"><p className="eyebrow">MILESTONES</p><h2>Moments worth keeping</h2>{progress.milestones.length ? progress.milestones.map((milestone, index) => <div className="milestone-row" key={`${milestone}-${index}`}><span>✦</span><p>{milestone}</p></div>) : <p className="muted-copy">Level changes will appear here after you reassess.</p>}<button className="soft-button" onClick={() => startAssessment(progress.selectedGoals[0] ?? 'squat')}>Repeat an assessment</button><div className="privacy-note"><strong>Private by default</strong><p>Your notes remain on this device. Sign in from the profile button to sync them privately across your devices.</p></div></aside>
       </div>
     </>
+  );
+}
+
+function AccountDialog({ sync, close }: { sync: ProgressSync; close: () => void }) {
+  const [email, setEmail] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  const [formError, setFormError] = useState('');
+
+  const sendLink = async (event: FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setFormError('');
+    setMessage('');
+    try {
+      await sync.sendMagicLink(email.trim());
+      setMessage('Check your email and open the Happy Body sign-in link on this device.');
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'We could not send the sign-in link.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const signOut = async () => {
+    setBusy(true);
+    setFormError('');
+    try {
+      await sync.signOut();
+      setMessage('Signed out. Your progress is still available on this device.');
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'We could not sign you out.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const statusCopy = {
+    local: 'Saved on this device',
+    connecting: 'Connecting to your journey…',
+    syncing: 'Saving your latest changes…',
+    synced: 'Your journey is synced',
+    offline: 'Offline — changes will sync later',
+    error: 'Sync needs attention',
+  }[sync.status];
+
+  return (
+    <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) close(); }}>
+      <section className="practice-dialog account-dialog" role="dialog" aria-modal="true" aria-labelledby="account-title">
+        <div className="dialog-heading"><div><p className="eyebrow">ACCOUNT & SYNC</p><h2 id="account-title">Take your journey with you</h2></div><button onClick={close} aria-label="Close account settings">×</button></div>
+
+        {!sync.configured ? (
+          <div className="account-empty"><span aria-hidden="true">○</span><h3>Cloud sync is almost ready.</h3><p>Your progress continues to save safely on this device while the connection is completed.</p></div>
+        ) : sync.user ? (
+          <div className="account-signed-in">
+            <div className="account-identity"><span>{sync.user.email?.slice(0, 1).toUpperCase()}</span><div><small>Signed in as</small><strong>{sync.user.email}</strong></div></div>
+            <div className={`sync-status-card ${sync.status}`}><span className="sync-status-icon" aria-hidden="true">✓</span><div><strong>{statusCopy}</strong><small>{sync.lastSyncedAt ? `Last synced ${new Intl.DateTimeFormat('en', { hour: 'numeric', minute: '2-digit' }).format(new Date(sync.lastSyncedAt))}` : 'Your device keeps a local copy too.'}</small></div></div>
+            {(formError || sync.errorMessage) && <p className="form-message error" role="alert">{formError || sync.errorMessage}</p>}
+            {message && <p className="form-message success" role="status">{message}</p>}
+            <p className="account-help">Practices, assessments, levels and milestones are private to your account. If you lose connection, keep using Happy Body normally—changes will upload later.</p>
+            <div className="account-actions"><button className="secondary-button" onClick={signOut} disabled={busy}>Sign out</button><button className="primary-button" onClick={() => sync.syncNow()} disabled={busy || sync.status === 'syncing'}>Sync now</button></div>
+          </div>
+        ) : (
+          <form className="account-form" onSubmit={sendLink}>
+            <div className="account-intro"><span aria-hidden="true">↟</span><div><h3>One journey, on every device.</h3><p>Sign in to securely sync your goals, practices, assessments and milestones. Your existing progress will be brought with you.</p></div></div>
+            <label>Email address<input type="email" inputMode="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" required /></label>
+            <button className="primary-button account-submit" disabled={busy}>{busy ? 'Sending…' : 'Email me a sign-in link →'}</button>
+            {formError && <p className="form-message error" role="alert">{formError}</p>}
+            {message && <p className="form-message success" role="status">{message}</p>}
+            <p className="account-fine-print">No password needed. We use your email only to identify your private Happy Body account.</p>
+          </form>
+        )}
+      </section>
+    </div>
   );
 }
 
