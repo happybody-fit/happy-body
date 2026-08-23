@@ -42,6 +42,6 @@ If using the root domain, GitHub normally requests `A`/`AAAA` records. If using 
 
 ## Local data and account sync
 
-Progress is always cached under `happy-body-progress-v1` in browser `localStorage`, so the app continues to work offline. A user can optionally request a passwordless email link; after sign-in, practices, assessments, pathway levels and milestones sync to Supabase. Existing local progress is migrated on first sign-in and later offline changes retry automatically.
+Progress is always cached under `happy-body-progress-v1` in browser `localStorage`, so the app continues to work offline. A user can sign in with Google or request a passwordless email link; after sign-in, practices, assessments, pathway levels and milestones sync to Supabase. Existing local progress is migrated on first sign-in and later offline changes retry automatically.
 
 The database definition is versioned in `supabase/migrations/`. Every progress table has row-level security tied to the signed-in user. The browser receives only the publishable key; privileged Supabase keys must never be exposed or committed.

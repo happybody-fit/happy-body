@@ -445,6 +445,18 @@ function AccountDialog({ sync, close }: { sync: ProgressSync; close: () => void 
     }
   };
 
+  const signInWithGoogle = async () => {
+    setBusy(true);
+    setFormError('');
+    setMessage('');
+    try {
+      await sync.signInWithGoogle();
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'We could not start Google sign-in.');
+      setBusy(false);
+    }
+  };
+
   const signOut = async () => {
     setBusy(true);
     setFormError('');
@@ -486,11 +498,13 @@ function AccountDialog({ sync, close }: { sync: ProgressSync; close: () => void 
         ) : (
           <form className="account-form" onSubmit={sendLink}>
             <div className="account-intro"><span aria-hidden="true">↟</span><div><h3>One journey, on every device.</h3><p>Sign in to securely sync your goals, practices, assessments and milestones. Your existing progress will be brought with you.</p></div></div>
+            <button className="google-sign-in" type="button" onClick={signInWithGoogle} disabled={busy}><span aria-hidden="true">G</span>Continue with Google</button>
+            <div className="account-divider"><span>or use email</span></div>
             <label>Email address<input type="email" inputMode="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" required /></label>
             <button className="primary-button account-submit" disabled={busy}>{busy ? 'Sending…' : 'Email me a sign-in link →'}</button>
             {formError && <p className="form-message error" role="alert">{formError}</p>}
             {message && <p className="form-message success" role="status">{message}</p>}
-            <p className="account-fine-print">No password needed. We use your email only to identify your private Happy Body account.</p>
+            <p className="account-fine-print">No password needed. Google shares only your basic profile and email, which identify your private Happy Body account.</p>
           </form>
         )}
       </section>

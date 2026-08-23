@@ -155,6 +155,18 @@ export function useProgressSync(
     if (error) throw error;
   };
 
+  const signInWithGoogle = async () => {
+    if (!supabase) throw new Error('Cloud sync has not been connected yet.');
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/`,
+        queryParams: { prompt: 'select_account' },
+      },
+    });
+    if (error) throw error;
+  };
+
   const signOut = async () => {
     if (!supabase) return;
     const { error } = await supabase.auth.signOut();
@@ -168,6 +180,7 @@ export function useProgressSync(
     lastSyncedAt,
     errorMessage,
     sendMagicLink,
+    signInWithGoogle,
     signOut,
     syncNow: () => synchronize(),
   };

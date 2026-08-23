@@ -368,6 +368,12 @@ h3 { font-family: Georgia, serif; font-size: 24px; font-weight: 500; margin: 24p
 .account-intro h3 { margin: 0 0 5px; font-size: 20px; }
 .account-intro p, .account-help { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
 .account-submit { width: 100%; }
+.google-sign-in { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid var(--line); border-radius: 999px; background: white; color: var(--ink); padding: 12px 18px; font-size: 12px; font-weight: 800; cursor: pointer; }
+.google-sign-in:hover { border-color: var(--moss); background: #fbfcfa; }
+.google-sign-in > span { width: 21px; height: 21px; display: grid; place-items: center; border-radius: 50%; background: conic-gradient(from -45deg, #4285f4 0 25%, #34a853 25% 50%, #fbbc05 50% 75%, #ea4335 75%); color: white; font-family: Arial, sans-serif; font-size: 12px; font-weight: 900; }
+.account-divider { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.account-divider::before, .account-divider::after { content: ''; height: 1px; flex: 1; background: var(--line); }
+.account-divider span { white-space: nowrap; }
 .account-fine-print { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.5; text-align: center; }
 .form-message { margin: 0; padding: 11px 13px; border-radius: 12px; font-size: 11px; line-height: 1.5; }
 .form-message.success { background: var(--sage); color: var(--moss); }
