@@ -1,4 +1,4 @@
-const CACHE_NAME = 'happy-body-v1';
+const CACHE_NAME = 'happy-body-v2';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(['./', './manifest.webmanifest'])));

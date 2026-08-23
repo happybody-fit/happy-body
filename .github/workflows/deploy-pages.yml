@@ -35,6 +35,8 @@ jobs:
           NEXT_PUBLIC_BASE_PATH: ${{ vars.HAPPY_BODY_BASE_PATH }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.HAPPY_BODY_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.HAPPY_BODY_SUPABASE_PUBLISHABLE_KEY }}
+          # OAuth client IDs are public identifiers; the client secret remains only in Supabase.
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: 861012333090-focj951964h56ebstgbhkh9a5e92h3bv.apps.googleusercontent.com
       - uses: actions/upload-pages-artifact@v3
         with:
           path: out

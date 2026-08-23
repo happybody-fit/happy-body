@@ -155,14 +155,12 @@ export function useProgressSync(
     if (error) throw error;
   };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (credential: string, nonce: string) => {
     if (!supabase) throw new Error('Cloud sync has not been connected yet.');
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithIdToken({
       provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/`,
-        queryParams: { prompt: 'select_account' },
-      },
+      token: credential,
+      nonce,
     });
     if (error) throw error;
   };

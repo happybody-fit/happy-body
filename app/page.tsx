@@ -1,11 +1,12 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { pathwayById, pathways } from '@/data/pathways';
 import { browserProgressRepository, defaultProgress, isPathwayId } from '@/lib/storage';
 import { useProgressSync } from '@/lib/use-progress-sync';
 import type { ProgressSync } from '@/lib/use-progress-sync';
 import type { PathwayId, PracticeEntry, ScreenId, UserProgress } from '@/lib/types';
+import { createGoogleNonce, loadGoogleIdentity } from '@/lib/google-identity';
 
 const navItems: { id: ScreenId; label: string; shortLabel: string; icon: string }[] = [
   { id: 'dashboard', label: 'My Happy Body', shortLabel: 'My Body', icon: '⌂' },
@@ -445,14 +446,15 @@ function AccountDialog({ sync, close }: { sync: ProgressSync; close: () => void 
     }
   };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (credential: string, nonce: string) => {
     setBusy(true);
     setFormError('');
     setMessage('');
     try {
-      await sync.signInWithGoogle();
+      await sync.signInWithGoogle(credential, nonce);
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'We could not start Google sign-in.');
+      setFormError(error instanceof Error ? error.message : 'We could not complete Google sign-in.');
+    } finally {
       setBusy(false);
     }
   };
@@ -498,7 +500,7 @@ function AccountDialog({ sync, close }: { sync: ProgressSync; close: () => void 
         ) : (
           <form className="account-form" onSubmit={sendLink}>
             <div className="account-intro"><span aria-hidden="true">↟</span><div><h3>One journey, on every device.</h3><p>Sign in to securely sync your goals, practices, assessments and milestones. Your existing progress will be brought with you.</p></div></div>
-            <button className="google-sign-in" type="button" onClick={signInWithGoogle} disabled={busy}><span aria-hidden="true">G</span>Continue with Google</button>
+            <GoogleSignInButton onCredential={signInWithGoogle} disabled={busy} onError={setFormError} />
             <div className="account-divider"><span>or use email</span></div>
             <label>Email address<input type="email" inputMode="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" required /></label>
             <button className="primary-button account-submit" disabled={busy}>{busy ? 'Sending…' : 'Email me a sign-in link →'}</button>
@@ -508,6 +510,105 @@ function AccountDialog({ sync, close }: { sync: ProgressSync; close: () => void 
           </form>
         )}
       </section>
+    </div>
+  );
+}
+
+function GoogleSignInButton({
+  onCredential,
+  disabled,
+  onError,
+}: {
+  onCredential: (credential: string, nonce: string) => Promise<void>;
+  disabled: boolean;
+  onError: (message: string) => void;
+}) {
+  const buttonRef = useRef<HTMLDivElement>(null);
+  const onCredentialRef = useRef(onCredential);
+  const onErrorRef = useRef(onError);
+  const [loading, setLoading] = useState(true);
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+
+  useEffect(() => {
+    onCredentialRef.current = onCredential;
+    onErrorRef.current = onError;
+  }, [onCredential, onError]);
+
+  useEffect(() => {
+    let active = true;
+    let resizeObserver: ResizeObserver | null = null;
+
+    const prepare = async () => {
+      if (!googleClientId) {
+        if (active) {
+          setLoading(false);
+          onErrorRef.current('Google sign-in has not been configured yet.');
+        }
+        return;
+      }
+
+      try {
+        const [googleIdentity, { nonce, hashedNonce }] = await Promise.all([
+          loadGoogleIdentity(),
+          createGoogleNonce(),
+        ]);
+        if (!active || !buttonRef.current) return;
+
+        googleIdentity.initialize({
+          client_id: googleClientId,
+          callback: (response) => {
+            if (!response.credential) {
+              onErrorRef.current('Google did not return a sign-in credential. Please try again.');
+              return;
+            }
+            void onCredentialRef.current(response.credential, nonce);
+          },
+          nonce: hashedNonce,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+          context: 'signin',
+          itp_support: true,
+          ux_mode: 'popup',
+          use_fedcm_for_prompt: true,
+        });
+
+        const render = () => {
+          const target = buttonRef.current;
+          if (!target) return;
+          target.replaceChildren();
+          googleIdentity.renderButton(target, {
+            type: 'standard',
+            theme: 'outline',
+            size: 'large',
+            shape: 'pill',
+            text: 'continue_with',
+            logo_alignment: 'left',
+            width: String(Math.min(400, Math.max(240, Math.floor(target.clientWidth)))),
+          });
+        };
+
+        render();
+        resizeObserver = new ResizeObserver(render);
+        resizeObserver.observe(buttonRef.current);
+        setLoading(false);
+      } catch (error) {
+        if (!active) return;
+        setLoading(false);
+        onErrorRef.current(error instanceof Error ? error.message : 'Google sign-in could not be loaded.');
+      }
+    };
+
+    void prepare();
+    return () => {
+      active = false;
+      resizeObserver?.disconnect();
+    };
+  }, [googleClientId]);
+
+  return (
+    <div className={`google-sign-in-shell${disabled ? ' disabled' : ''}`} aria-busy={loading || disabled}>
+      <div ref={buttonRef} className="google-sign-in-frame" />
+      {loading && <span className="google-sign-in-loading">Preparing secure Google sign-in…</span>}
     </div>
   );
 }
