@@ -5,6 +5,36 @@ import { equipmentOptions, goalOptions, limitationOptions } from '@/data/catalog
 import type { EquipmentId, GoalId, UserProfile } from '@/lib/types';
 import { Brand, PainNote } from './shared';
 
+export function Welcome({ begin, signIn }: { begin: () => void; signIn: () => void }) {
+  return (
+    <main className="welcome-shell">
+      <header className="welcome-brand"><Brand /></header>
+      <section className="welcome-stage" aria-labelledby="welcome-title">
+        <div className="welcome-copy">
+          <p className="welcome-kicker">Welcome to Happy Body</p>
+          <h1 id="welcome-title">Move freely.<br />Live fully.</h1>
+          <p className="welcome-promise">Imagine feeling free in your movement, confident in your strength and fully at home in your body.</p>
+          <div className="welcome-actions">
+            <button className="primary-button welcome-begin" onClick={begin}>Begin My Journey <span aria-hidden="true">→</span></button>
+            <p>Already have a Happy Body account? <button className="text-button" onClick={signIn}>Sign in</button></p>
+          </div>
+        </div>
+        <div className="welcome-art" aria-hidden="true">
+          <div className="welcome-sun" />
+          <div className="welcome-orbit welcome-orbit-one" />
+          <div className="welcome-orbit welcome-orbit-two" />
+          <div className="welcome-figure">
+            <i className="welcome-head" />
+            <i className="welcome-body" />
+            <i className="welcome-arm" />
+          </div>
+          <p>Strong <span>·</span> Free <span>·</span> Alive</p>
+        </div>
+      </section>
+    </main>
+  );
+}
+
 const stepCopy = [
   { eyebrow: 'WELCOME', title: 'Let’s make Happy Body yours.', body: 'A few simple choices help the app suggest what may be useful for your body today. Your name is optional.' },
   { eyebrow: 'YOUR DIRECTION', title: 'What would you like to grow?', body: 'Choose one main intention. Add other goals or skills without turning them into a competition.' },
@@ -15,7 +45,7 @@ const stepCopy = [
   { eyebrow: 'A STARTING POINT', title: 'Meet your body as it is today.', body: 'A short movement check keeps your Body Map honest. Nothing is graded, and unknown is a valid answer.' },
 ];
 
-export function Onboarding({ initial, onComplete }: { initial: UserProfile; onComplete: (profile: UserProfile, takeAssessment: boolean) => void }) {
+export function Onboarding({ initial, onComplete, onBackToWelcome }: { initial: UserProfile; onComplete: (profile: UserProfile, takeAssessment: boolean) => void; onBackToWelcome?: () => void }) {
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<UserProfile>({ ...initial, onboardingCompleted: false, onboardingCompletedAt: null });
   const copy = stepCopy[step];
@@ -72,7 +102,7 @@ export function Onboarding({ initial, onComplete }: { initial: UserProfile; onCo
         </div>
 
         <footer className="onboarding-actions">
-          <button className="text-button" disabled={step === 0} onClick={() => setStep((value) => value - 1)}>← Back</button>
+          <button className="text-button" disabled={step === 0 && !onBackToWelcome} onClick={() => step === 0 ? onBackToWelcome?.() : setStep((value) => value - 1)}>← Back</button>
           {step < stepCopy.length - 1 ? <button className="primary-button" disabled={nextDisabled} onClick={() => setStep((value) => value + 1)}>Continue <span aria-hidden="true">→</span></button> : <div className="finish-actions"><button className="secondary-button" onClick={() => finish(false)}>Skip for now</button><button className="primary-button" onClick={() => finish(true)}>Start my movement check →</button></div>}
         </footer>
       </section>

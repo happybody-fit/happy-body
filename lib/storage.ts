@@ -45,7 +45,7 @@ export function createDefaultData(now = new Date().toISOString()): HappyBodyData
     dailyCheckIns: [],
     painFlags: [],
     milestones: [],
-    preferences: { assessmentIntroSeen: false, lastScreen: 'today' },
+    preferences: { welcomeSeen: false, assessmentIntroSeen: false, lastScreen: 'today' },
     legacyImportedAt: null,
     updatedAt: now,
   };
@@ -202,7 +202,10 @@ export const browserProgressRepository: ProgressRepository = {
     }
   },
   clear() {
-    if (typeof window !== 'undefined') window.localStorage.removeItem(STORAGE_KEY);
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(STORAGE_KEY);
+      window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+    }
   },
 };
 

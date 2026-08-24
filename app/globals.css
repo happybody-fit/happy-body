@@ -59,6 +59,34 @@ h3 { font-size: 23px; line-height: 1.15; }
 .avatar.sync-offline .sync-dot, .avatar.sync-error .sync-dot { background: var(--rose); }
 .bottom-nav { display: none; }
 
+/* Welcome */
+.welcome-shell { position: relative; min-height: 100svh; overflow: hidden; padding: 24px clamp(24px, 5vw, 72px); background: radial-gradient(circle at 83% 12%, rgba(229,170,83,.2), transparent 25%), radial-gradient(circle at 7% 88%, rgba(76,107,82,.16), transparent 27%), var(--paper); }
+.welcome-brand { position: relative; z-index: 2; max-width: 1320px; margin: 0 auto; }
+.welcome-stage { position: relative; z-index: 1; width: min(1320px, 100%); min-height: calc(100svh - 88px); margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(360px, .92fr); gap: clamp(32px, 6vw, 90px); align-items: center; }
+.welcome-copy { max-width: 720px; padding: 54px 0 86px; }
+.welcome-kicker { margin-bottom: 20px; color: var(--moss); font-size: 11px; font-weight: 850; letter-spacing: .19em; text-transform: uppercase; }
+.welcome-copy h1 { max-width: 680px; margin-bottom: 28px; font-size: clamp(60px, 7.4vw, 108px); line-height: .91; }
+.welcome-promise { max-width: 630px; margin-bottom: 35px; color: var(--ink-2); font: clamp(20px, 2vw, 27px)/1.52 Georgia, "Times New Roman", serif; letter-spacing: -.015em; }
+.welcome-actions { display: grid; justify-items: start; gap: 15px; }
+.welcome-begin { min-height: 56px; padding: 15px 25px; font-size: 13px; }
+.welcome-begin span { display: inline-block; margin-left: 18px; }
+.welcome-actions p { margin: 0; color: var(--muted); font-size: 11px; }
+.welcome-actions .text-button { margin-left: 3px; font-size: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.welcome-art { position: relative; width: min(520px, 39vw); aspect-ratio: 1; justify-self: center; display: grid; place-items: center; border-radius: 50%; background: linear-gradient(145deg, #e7eee1, #d3e1cf); }
+.welcome-art::before { content: ''; position: absolute; inset: 12%; border: 1px solid rgba(36,56,47,.15); border-radius: 44% 56% 51% 49% / 53% 44% 56% 47%; transform: rotate(13deg); }
+.welcome-art::after { content: ''; position: absolute; width: 36%; height: 36%; right: -7%; bottom: 0; border-radius: 50%; background: rgba(242,213,194,.8); }
+.welcome-sun { position: absolute; width: 27%; height: 27%; right: 4%; top: 3%; border-radius: 50%; background: var(--sun); box-shadow: 0 12px 35px rgba(147,100,39,.14); }
+.welcome-orbit { position: absolute; border: 1px solid rgba(36,56,47,.19); border-radius: 50%; }
+.welcome-orbit-one { inset: 17% -5%; transform: rotate(28deg); }
+.welcome-orbit-two { inset: -7% 29%; transform: rotate(-20deg); }
+.welcome-figure { position: relative; width: 38%; height: 58%; transform: rotate(-7deg); }
+.welcome-figure i { position: absolute; display: block; background: var(--ink); }
+.welcome-head { width: 24%; aspect-ratio: 1; left: 38%; top: 0; border-radius: 50%; }
+.welcome-body { width: 32%; height: 70%; left: 34%; top: 21%; border-radius: 55% 55% 44% 44%; transform: rotate(4deg); }
+.welcome-arm { width: 100%; height: 12%; left: 0; top: 38%; border-radius: 999px; transform: rotate(-21deg); }
+.welcome-art > p { position: absolute; bottom: 12%; margin: 0; color: var(--moss); font-size: 9px; font-weight: 850; letter-spacing: .18em; text-transform: uppercase; }
+.welcome-art > p span { padding: 0 6px; color: var(--sun); }
+
 /* Onboarding */
 .onboarding-shell { min-height: 100vh; padding: 24px; background: radial-gradient(circle at 82% 14%, rgba(229,170,83,.18), transparent 20%), radial-gradient(circle at 6% 78%, rgba(76,107,82,.14), transparent 25%), var(--paper); }
 .onboarding-brand { max-width: 1040px; margin: 0 auto 22px; display: flex; justify-content: space-between; align-items: center; }
@@ -264,6 +292,7 @@ legend small { margin-left: 5px; color: var(--muted); font-weight: 500; text-tra
 .toast { position: fixed; z-index: 130; right: 22px; bottom: 24px; max-width: 360px; padding: 14px 18px; border-radius: 14px; background: var(--ink); color: white; box-shadow: var(--shadow); font-size: 11px; }
 
 @media (max-width: 900px) {
+  .welcome-stage { grid-template-columns: 1fr .75fr; gap: 24px; }.welcome-art { width: min(390px, 38vw); }
   .today-hero { grid-template-columns: 1fr; }.body-map-orbit { position: absolute; right: -70px; bottom: -90px; opacity: .5; }
   .daily-checkin-card { grid-template-columns: 1fr; }.checkin-controls { grid-template-columns: 1fr 1fr; }.checkin-controls .soft-button { grid-column: 1 / -1; }
   .recommendation-grid { grid-template-columns: 1fr 1fr; }.recommendation-card.featured { grid-column: 1 / -1; }
@@ -271,6 +300,7 @@ legend small { margin-left: 5px; color: var(--muted); font-weight: 500; text-tra
 }
 
 @media (max-width: 720px) {
+  .welcome-shell { padding: 18px 20px max(28px, env(safe-area-inset-bottom)); }.welcome-stage { min-height: calc(100svh - 64px); grid-template-columns: 1fr; align-content: center; gap: 4px; }.welcome-copy { position: relative; z-index: 2; padding: 44px 0 24px; }.welcome-kicker { margin-bottom: 15px; }.welcome-copy h1 { margin-bottom: 22px; font-size: clamp(59px, 17vw, 76px); }.welcome-promise { max-width: 520px; margin-bottom: 28px; font-size: 19px; line-height: 1.5; }.welcome-begin { width: 100%; justify-content: center; }.welcome-actions { width: 100%; justify-items: stretch; }.welcome-actions p { text-align: center; }.welcome-art { position: absolute; z-index: 0; width: 260px; right: -112px; top: 6%; opacity: .22; }.welcome-art > p { display: none; }
   .app-shell { padding-bottom: 82px; }.topbar { height: 68px; padding: 0 18px; }.brand { font-size: 12px; letter-spacing: .16em; }.brand-mark { width: 35px; height: 35px; }.desktop-nav { display: none; }.app-page { padding: 0 15px 30px; }
   .bottom-nav { position: fixed; z-index: 40; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(5, 1fr); min-height: 68px; padding: 7px 5px max(7px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: rgba(255,253,248,.94); backdrop-filter: blur(14px); }.bottom-nav button { display: grid; place-items: center; gap: 1px; border: 0; background: transparent; color: #879189; font-size: 8px; font-weight: 750; }.bottom-nav button span { font-size: 18px; }.bottom-nav button.active { color: var(--moss); }
   .onboarding-shell { padding: 12px; }.onboarding-brand { margin: 4px 5px 12px; }.onboarding-brand > span { display: none; }.onboarding-card { min-height: calc(100vh - 72px); padding: 24px 18px; border-radius: 24px; }.onboarding-heading { margin: 27px auto 20px; }.onboarding-heading h1 { font-size: 39px; }.onboarding-content { margin-top: 0; }.choice-grid { grid-template-columns: 1fr; }.time-grid { grid-template-columns: repeat(2, 1fr); }.onboarding-actions { align-items: end; }.finish-actions { justify-content: flex-end; }.finish-actions .secondary-button, .finish-actions .primary-button { width: 100%; }.assessment-invitation { grid-template-columns: 1fr; gap: 22px; }.body-map-preview { width: 210px; margin: 0 auto; }

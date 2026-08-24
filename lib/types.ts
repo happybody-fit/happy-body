@@ -171,6 +171,7 @@ export interface HappyBodyData {
   painFlags: PainFlag[];
   milestones: string[];
   preferences: {
+    welcomeSeen: boolean;
     assessmentIntroSeen: boolean;
     lastScreen: ScreenId;
   };

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { pathwayById } from '@/data/pathways';
 import { AccountDialog } from '@/components/account-dialog';
 import { AssessmentFlow } from '@/components/assessment-flow';
-import { Onboarding } from '@/components/onboarding';
+import { Onboarding, Welcome } from '@/components/onboarding';
 import { PracticeDialog } from '@/components/practice-dialog';
 import { DiaryScreen, ExploreScreen, ProgressScreen, SettingsScreen, TodayScreen } from '@/components/screens';
 import { Header, localDate, MobileNav, uid } from '@/components/shared';
@@ -113,9 +113,11 @@ export default function Home() {
 
   const updateProfile = (profile: UserProfile) => setData((current) => ({ ...current, profile, updatedAt: new Date().toISOString() }));
   const resetData = () => { browserProgressRepository.clear(); setData(createDefaultData()); setScreen('today'); setToast('Local Happy Body data has been reset.'); };
+  const beginOnboarding = () => setData((current) => ({ ...current, preferences: { ...current.preferences, welcomeSeen: true }, updatedAt: new Date().toISOString() }));
 
   if (!ready) return <main className="loading-shell"><span className="result-flower">✦</span><p>Preparing your Happy Body…</p></main>;
-  if (!data.profile.onboardingCompleted) return <Onboarding initial={data.profile} onComplete={completeOnboarding} />;
+  if (!data.profile.onboardingCompleted && !data.preferences.welcomeSeen) return <><Welcome begin={beginOnboarding} signIn={() => setShowAccount(true)} />{showAccount && <AccountDialog sync={sync} close={() => setShowAccount(false)} />}</>;
+  if (!data.profile.onboardingCompleted) return <Onboarding initial={data.profile} onComplete={completeOnboarding} onBackToWelcome={data.profile.onboardingCompletedAt ? undefined : () => setData((current) => ({ ...current, preferences: { ...current.preferences, welcomeSeen: false }, updatedAt: new Date().toISOString() }))} />;
   if (assessment) return <AssessmentFlow data={data} mode={assessment.mode} pathwayId={assessment.pathwayId} onResult={saveAssessmentResult} onClose={() => { setAssessment(null); setScreen('today'); }} />;
 
   return (
