@@ -73,7 +73,9 @@ export default function Home() {
         ...current,
         movementStates: { ...current.movementStates, [state.movementId]: nextState },
         assessments: [record, ...current.assessments],
-        painFlags: painBodyArea ? [{ id: uid(), movementId: state.movementId, bodyArea: painBodyArea, note: '', createdAt: record.date, active: true }, ...current.painFlags] : current.painFlags,
+        painFlags: painBodyArea
+          ? [{ id: uid(), movementId: state.movementId, bodyArea: painBodyArea, note: '', createdAt: record.date, active: true }, ...current.painFlags]
+          : current.painFlags.map((flag) => flag.movementId === state.movementId ? { ...flag, active: false } : flag),
         milestones: levelChanged ? [`${pathwayById[record.pathwayId!].name}: ${newLevel!.title}`, ...current.milestones] : current.milestones,
         preferences: { ...current.preferences, assessmentIntroSeen: true },
         updatedAt: new Date().toISOString(),
