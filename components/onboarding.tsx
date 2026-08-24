@@ -37,7 +37,8 @@ export function Welcome({ begin, signIn }: { begin: () => void; signIn: () => vo
 
 const stepCopy = [
   { eyebrow: 'WELCOME', title: 'Let’s make Happy Body yours.', body: 'A few simple choices help the app suggest what may be useful for your body today. Your name is optional.' },
-  { eyebrow: 'YOUR DIRECTION', title: 'What would you like to grow?', body: 'Choose one main intention. Add other goals or skills without turning them into a competition.' },
+  { eyebrow: 'YOUR DIRECTION', title: 'What would you like Happy Body to help you with?', body: 'Choose everything that feels relevant. You can change this later.' },
+  { eyebrow: 'SKILLS THAT INSPIRE YOU', title: 'Are there any movement skills you would love to learn?', body: 'Choose as many as inspire you—or skip this for now.' },
   { eyebrow: 'YOUR CONTEXT', title: 'What should Happy Body be considerate of?', body: 'These are context for gentler suggestions, not a diagnosis.' },
   { eyebrow: 'YOUR TIME', title: 'How much time usually feels realistic?', body: 'This only changes the size of suggestions. You can choose differently on any day.' },
   { eyebrow: 'YOUR RHYTHM', title: 'How do you like to practise?', body: 'One quiet session and short movement breaks can both build capability.' },
@@ -47,10 +48,24 @@ const stepCopy = [
 
 export function Onboarding({ initial, onComplete, onBackToWelcome }: { initial: UserProfile; onComplete: (profile: UserProfile, takeAssessment: boolean) => void; onBackToWelcome?: () => void }) {
   const [step, setStep] = useState(0);
-  const [draft, setDraft] = useState<UserProfile>({ ...initial, onboardingCompleted: false, onboardingCompletedAt: null });
-  const copy = stepCopy[step];
   const foundations = goalOptions.filter((goal) => goal.group === 'foundation');
   const skills = goalOptions.filter((goal) => goal.group === 'skill');
+  const foundationIds = new Set(foundations.map((goal) => goal.id));
+  const skillIds = new Set(skills.map((goal) => goal.id));
+  const [draft, setDraft] = useState<UserProfile>(() => {
+    const previousGoals = [initial.primaryGoal, ...initial.secondaryGoals].filter((goal): goal is GoalId => Boolean(goal));
+    const migratedGoals = previousGoals.map((goal) => goal === 'natural-movement' ? 'move-comfortably' : goal);
+    return {
+      ...initial,
+      primaryGoal: null,
+      secondaryGoals: Array.from(new Set(migratedGoals.filter((goal) => foundationIds.has(goal)))),
+      skillInterests: Array.from(new Set([...initial.skillInterests, ...migratedGoals.filter((goal) => skillIds.has(goal))])),
+      onboardingCompleted: false,
+      onboardingCompletedAt: null,
+    };
+  });
+  const copy = stepCopy[step];
+  const selectedGeneralGoals = foundations.filter((goal) => draft.secondaryGoals.includes(goal.id)).map((goal) => goal.id);
 
   const toggleGoal = (field: 'secondaryGoals' | 'skillInterests', id: GoalId) => {
     setDraft((current) => ({
@@ -66,7 +81,7 @@ export function Onboarding({ initial, onComplete, onBackToWelcome }: { initial: 
   });
 
   const finish = (takeAssessment: boolean) => onComplete({ ...draft, onboardingCompleted: true, onboardingCompletedAt: new Date().toISOString() }, takeAssessment);
-  const nextDisabled = step === 1 && !draft.primaryGoal;
+  const nextDisabled = step === 1 && selectedGeneralGoals.length === 0;
 
   return (
     <main className="onboarding-shell">
@@ -80,25 +95,23 @@ export function Onboarding({ initial, onComplete, onBackToWelcome }: { initial: 
         <div className="onboarding-content">
           {step === 0 && <label className="large-field">What should we call you? <span>Optional</span><input autoFocus autoComplete="given-name" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Your name" /></label>}
 
-          {step === 1 && <div className="goal-chooser">
-            <fieldset><legend>Main intention</legend><div className="choice-grid">{foundations.map((goal) => <button type="button" key={goal.id} className={`choice-card ${draft.primaryGoal === goal.id ? 'selected' : ''}`} onClick={() => setDraft({ ...draft, primaryGoal: goal.id })}><strong>{goal.label}</strong><span>{goal.description}</span></button>)}</div></fieldset>
-            <fieldset><legend>Other goals <small>Optional</small></legend><div className="chip-list">{foundations.filter((goal) => goal.id !== draft.primaryGoal).map((goal) => <button type="button" key={goal.id} className={draft.secondaryGoals.includes(goal.id) ? 'selected' : ''} onClick={() => toggleGoal('secondaryGoals', goal.id)}>{goal.label}</button>)}</div></fieldset>
-            <fieldset><legend>Skills that interest you <small>Optional</small></legend><div className="chip-list">{skills.map((goal) => <button type="button" key={goal.id} className={draft.skillInterests.includes(goal.id) ? 'selected' : ''} onClick={() => toggleGoal('skillInterests', goal.id)}>{goal.label}</button>)}</div></fieldset>
-          </div>}
+          {step === 1 && <div className="choice-grid general-goal-grid">{foundations.map((goal) => <button type="button" key={goal.id} aria-pressed={draft.secondaryGoals.includes(goal.id)} className={`choice-card goal-choice ${draft.secondaryGoals.includes(goal.id) ? 'selected' : ''}`} onClick={() => toggleGoal('secondaryGoals', goal.id)}><span className="choice-check" aria-hidden="true">✓</span><strong>{goal.label}</strong><span>{goal.description}</span></button>)}</div>}
 
-          {step === 2 && <div className="form-stack"><div className="chip-list spacious">{limitationOptions.map((item) => <button type="button" key={item} className={draft.limitations.includes(item) ? 'selected' : ''} onClick={() => toggleLimitation(item)}>{item}</button>)}</div><label className="large-field">Anything else? <span>Optional</span><textarea rows={3} value={draft.limitationNote} onChange={(event) => setDraft({ ...draft, limitationNote: event.target.value })} placeholder="For example: my right knee sometimes feels uncertain on stairs" /></label><PainNote compact /></div>}
+          {step === 2 && <div className="choice-grid skill-choice-grid">{skills.map((goal) => <button type="button" key={goal.id} aria-pressed={draft.skillInterests.includes(goal.id)} className={`choice-card goal-choice ${draft.skillInterests.includes(goal.id) ? 'selected' : ''}`} onClick={() => toggleGoal('skillInterests', goal.id)}><span className="choice-check" aria-hidden="true">✓</span><strong>{goal.label}</strong><span>{goal.description}</span></button>)}</div>}
 
-          {step === 3 && <div className="choice-grid time-grid">{[5, 10, 20, 30, 45, 60].map((minutes) => <button type="button" key={minutes} className={`choice-card centred ${draft.defaultMinutes === minutes ? 'selected' : ''}`} onClick={() => setDraft({ ...draft, defaultMinutes: minutes })}><strong>{minutes}</strong><span>minutes</span></button>)}</div>}
+          {step === 3 && <div className="form-stack"><div className="chip-list spacious">{limitationOptions.map((item) => <button type="button" key={item} className={draft.limitations.includes(item) ? 'selected' : ''} onClick={() => toggleLimitation(item)}>{item}</button>)}</div><label className="large-field">Anything else? <span>Optional</span><textarea rows={3} value={draft.limitationNote} onChange={(event) => setDraft({ ...draft, limitationNote: event.target.value })} placeholder="For example: my right knee sometimes feels uncertain on stairs" /></label><PainNote compact /></div>}
 
-          {step === 4 && <div className="choice-grid">{[
+          {step === 4 && <div className="choice-grid time-grid">{[5, 10, 20, 30, 45, 60].map((minutes) => <button type="button" key={minutes} className={`choice-card centred ${draft.defaultMinutes === minutes ? 'selected' : ''}`} onClick={() => setDraft({ ...draft, defaultMinutes: minutes })}><strong>{minutes}</strong><span>minutes</span></button>)}</div>}
+
+          {step === 5 && <div className="choice-grid">{[
             ['single-session', 'One session', 'I like setting aside one quiet block of time.'],
             ['movement-breaks', 'Movement breaks', 'I prefer small pieces spread across the day.'],
             ['either', 'Either works', 'Let the day decide.'],
           ].map(([id, label, description]) => <button type="button" key={id} className={`choice-card ${draft.practiceStyle === id ? 'selected' : ''}`} onClick={() => setDraft({ ...draft, practiceStyle: id as UserProfile['practiceStyle'] })}><strong>{label}</strong><span>{description}</span></button>)}{draft.practiceStyle === 'movement-breaks' && <label className="inline-field">How many small breaks? <input type="number" min="1" max="6" value={draft.movementBreaks} onChange={(event) => setDraft({ ...draft, movementBreaks: Math.max(1, Math.min(6, Number(event.target.value))) })} /></label>}</div>}
 
-          {step === 5 && <div className="choice-grid">{equipmentOptions.map((item) => <button type="button" key={item.id} className={`choice-card centred ${draft.equipment.includes(item.id) ? 'selected' : ''}`} onClick={() => toggleEquipment(item.id)}><strong>{item.label}</strong></button>)}</div>}
+          {step === 6 && <div className="choice-grid">{equipmentOptions.map((item) => <button type="button" key={item.id} className={`choice-card centred ${draft.equipment.includes(item.id) ? 'selected' : ''}`} onClick={() => toggleEquipment(item.id)}><strong>{item.label}</strong></button>)}</div>}
 
-          {step === 6 && <div className="assessment-invitation"><div className="body-map-preview" aria-hidden="true"><span>Reach</span><span>Squat</span><span>Sit</span><span>Get up</span></div><div><h2>Four foundation movements</h2><p>Try a comfortable deep squat, an overhead reach, floor sitting and getting up from the floor. If a chosen goal needs one extra check, Happy Body will offer it.</p><ul><li>About 3–5 minutes</li><li>Comfortable, limited and unsure are all useful answers</li><li>Pain stops that movement immediately</li></ul></div></div>}
+          {step === 7 && <div className="assessment-invitation"><div className="body-map-preview" aria-hidden="true"><span>Reach</span><span>Squat</span><span>Sit</span><span>Get up</span></div><div><h2>Four foundation movements</h2><p>Try a comfortable deep squat, an overhead reach, floor sitting and getting up from the floor. If a chosen goal needs one extra check, Happy Body will offer it.</p><ul><li>About 3–5 minutes</li><li>Comfortable, limited and unsure are all useful answers</li><li>Pain stops that movement immediately</li></ul></div></div>}
         </div>
 
         <footer className="onboarding-actions">
