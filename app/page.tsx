@@ -1,672 +1,135 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { pathwayById, pathways } from '@/data/pathways';
-import { browserProgressRepository, defaultProgress, isPathwayId } from '@/lib/storage';
+import { useEffect, useState } from 'react';
+import { pathwayById } from '@/data/pathways';
+import { AccountDialog } from '@/components/account-dialog';
+import { AssessmentFlow } from '@/components/assessment-flow';
+import { Onboarding } from '@/components/onboarding';
+import { PracticeDialog } from '@/components/practice-dialog';
+import { DiaryScreen, ExploreScreen, ProgressScreen, SettingsScreen, TodayScreen } from '@/components/screens';
+import { Header, localDate, MobileNav, uid } from '@/components/shared';
+import { browserProgressRepository, createDefaultData } from '@/lib/storage';
 import { useProgressSync } from '@/lib/use-progress-sync';
-import type { ProgressSync } from '@/lib/use-progress-sync';
-import type { PathwayId, PracticeEntry, ScreenId, UserProgress } from '@/lib/types';
-import { createGoogleNonce, loadGoogleIdentity } from '@/lib/google-identity';
+import type { BodyState, HappyBodyData, PathwayId, PracticeEntry, Recommendation, ScreenId, UserProfile } from '@/lib/types';
 
-const navItems: { id: ScreenId; label: string; shortLabel: string; icon: string }[] = [
-  { id: 'dashboard', label: 'My Happy Body', shortLabel: 'My Body', icon: '⌂' },
-  { id: 'goals', label: 'Explore Goals', shortLabel: 'Goals', icon: '○' },
-  { id: 'assessment', label: 'Find My Level', shortLabel: 'Assess', icon: '◎' },
-  { id: 'next-step', label: 'My Next Step', shortLabel: 'Next', icon: '→' },
-  { id: 'journey', label: 'My Journey', shortLabel: 'Journey', icon: '↟' },
-];
-
-const today = () => new Date().toISOString().slice(0, 10);
-const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(`${value}T12:00:00`));
-}
+type AssessmentView = { mode: 'initial' | 'pathway'; pathwayId?: PathwayId } | null;
 
 export default function Home() {
-  const [screen, setScreen] = useState<ScreenId>('dashboard');
-  const [progress, setProgress] = useState<UserProgress>(defaultProgress);
+  const [data, setData] = useState<HappyBodyData>(() => createDefaultData());
   const [ready, setReady] = useState(false);
-  const [activePathwayId, setActivePathwayId] = useState<PathwayId>('squat');
-  const [assessmentStep, setAssessmentStep] = useState(0);
-  const [assessmentAnswers, setAssessmentAnswers] = useState<Record<string, boolean>>({});
-  const [assessmentResult, setAssessmentResult] = useState<number | null>(null);
-  const [showPracticeForm, setShowPracticeForm] = useState(false);
+  const [screen, setScreen] = useState<ScreenId>('today');
+  const [assessment, setAssessment] = useState<AssessmentView>(null);
+  const [practice, setPractice] = useState<Recommendation | null | undefined>(undefined);
   const [showAccount, setShowAccount] = useState(false);
-  const [savedMessage, setSavedMessage] = useState('');
-  const sync = useProgressSync(progress, setProgress, ready);
+  const [toast, setToast] = useState('');
+  const sync = useProgressSync(data, setData, ready);
 
   useEffect(() => {
-    // localStorage is intentionally read after hydration so server and client markup match.
+    const loaded = browserProgressRepository.load();
+    // localStorage is read after hydration so server and client markup stay identical.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setProgress(browserProgressRepository.load());
+    setData(loaded);
+    setScreen(loaded.preferences.lastScreen ?? 'today');
     setReady(true);
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => undefined);
   }, []);
 
   useEffect(() => {
-    if (ready) browserProgressRepository.save(progress);
-  }, [progress, ready]);
+    if (ready) browserProgressRepository.save(data);
+  }, [data, ready]);
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'auto' });
-  }, [screen]);
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(''), 3200);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
-  const activePathway = pathwayById[activePathwayId];
-  const currentLevelIndex = progress.currentLevels[activePathwayId] ?? 0;
-
-  const navigate = (nextScreen: ScreenId, pathwayId?: PathwayId) => {
-    if (pathwayId) setActivePathwayId(pathwayId);
-    setScreen(nextScreen);
-    setSavedMessage('');
+  const navigate = (next: ScreenId) => {
+    setScreen(next);
+    setData((current) => ({ ...current, preferences: { ...current.preferences, lastScreen: next }, updatedAt: new Date().toISOString() }));
     window.scrollTo({ top: 0, behavior: 'auto' });
   };
 
-  const startAssessment = (pathwayId: PathwayId) => {
-    setActivePathwayId(pathwayId);
-    setAssessmentStep(0);
-    setAssessmentAnswers({});
-    setAssessmentResult(null);
-    navigate('assessment', pathwayId);
+  const completeOnboarding = (profile: UserProfile, takeAssessment: boolean) => {
+    setData((current) => ({ ...current, profile, updatedAt: new Date().toISOString() }));
+    if (takeAssessment) setAssessment({ mode: 'initial' });
+    else { setScreen('today'); setToast('Your Body Map is ready whenever you want to begin.'); }
   };
 
-  const answerAssessment = (passed: boolean) => {
-    const checkpoint = activePathway.assessment[assessmentStep];
-    const answers = { ...assessmentAnswers, [checkpoint.id]: passed };
-    setAssessmentAnswers(answers);
+  const startAssessment = (pathwayId?: PathwayId) => setAssessment(pathwayId ? { mode: 'pathway', pathwayId } : { mode: 'initial' });
 
-    if (assessmentStep < activePathway.assessment.length - 1) {
-      setAssessmentStep((step) => step + 1);
-      return;
-    }
-
-    let result = 0;
-    for (const test of activePathway.assessment) {
-      if (!answers[test.id]) break;
-      result = test.levelIndex;
-    }
-    setAssessmentResult(result);
-    const level = activePathway.levels[result];
-    setProgress((previous) => ({
-      ...previous,
-      currentLevels: { ...previous.currentLevels, [activePathwayId]: result },
-      assessments: [
-        { id: uid(), date: today(), pathwayId: activePathwayId, levelIndex: result, levelTitle: level.title },
-        ...previous.assessments,
-      ],
-      milestones: previous.currentLevels[activePathwayId] !== result
-        ? [`${activePathway.name}: ${level.title}`, ...previous.milestones]
-        : previous.milestones,
-    }));
-  };
-
-  const toggleGoal = (pathwayId: PathwayId) => {
-    setProgress((previous) => {
-      const selected = previous.selectedGoals.includes(pathwayId);
-      if (selected && previous.selectedGoals.length === 1) return previous;
+  const saveAssessmentResult: React.ComponentProps<typeof AssessmentFlow>['onResult'] = ({ state, record, painBodyArea }) => {
+    setData((current) => {
+      const previous = current.movementStates[state.movementId];
+      const preserveAdvancedLevel = record.checkpointId.startsWith('goal-')
+        && previous?.currentLevel !== null
+        && previous?.currentLevel !== undefined
+        && state.currentLevel !== null
+        && previous.currentLevel > state.currentLevel;
+      const nextState = preserveAdvancedLevel ? { ...state, currentLevel: previous.currentLevel, status: previous.status } : state;
+      const newLevel = record.pathwayId && nextState.currentLevel !== null ? pathwayById[record.pathwayId].levels[nextState.currentLevel] : null;
+      const levelChanged = Boolean(newLevel && previous?.currentLevel !== null && previous?.currentLevel !== undefined && previous.currentLevel !== nextState.currentLevel);
       return {
-        ...previous,
-        selectedGoals: selected
-          ? previous.selectedGoals.filter((id) => id !== pathwayId)
-          : [...previous.selectedGoals, pathwayId],
+        ...current,
+        movementStates: { ...current.movementStates, [state.movementId]: nextState },
+        assessments: [record, ...current.assessments],
+        painFlags: painBodyArea ? [{ id: uid(), movementId: state.movementId, bodyArea: painBodyArea, note: '', createdAt: record.date, active: true }, ...current.painFlags] : current.painFlags,
+        milestones: levelChanged ? [`${pathwayById[record.pathwayId!].name}: ${newLevel!.title}`, ...current.milestones] : current.milestones,
+        preferences: { ...current.preferences, assessmentIntroSeen: true },
+        updatedAt: new Date().toISOString(),
       };
     });
   };
 
   const savePractice = (entry: PracticeEntry) => {
-    setProgress((previous) => ({ ...previous, practices: [entry, ...previous.practices] }));
-    setShowPracticeForm(false);
-    setSavedMessage('Practice saved to your journey. Nicely done.');
+    setData((current) => {
+      const currentState = entry.pathwayId ? current.movementStates[entry.pathwayId] : null;
+      const pain = entry.bodyAfter === 'pain';
+      return {
+        ...current,
+        practices: [entry, ...current.practices],
+        movementStates: entry.pathwayId ? {
+          ...current.movementStates,
+          [entry.pathwayId]: {
+            ...(currentState ?? { movementId: entry.pathwayId, currentLevel: null, outcome: null, assessedAt: null, reassessAfter: null, note: '' }),
+            status: pain ? 'pain-flagged' : currentState?.currentLevel !== null && currentState?.currentLevel !== undefined ? 'in-progress' : 'unknown',
+          },
+        } : current.movementStates,
+        painFlags: pain ? [{ id: uid(), movementId: entry.movementId, bodyArea: entry.exerciseTitle, note: entry.notes, createdAt: entry.date, active: true }, ...current.painFlags] : current.painFlags,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+    setPractice(undefined);
+    setToast(entry.completion === 'not-today' ? 'Not today is useful information. Saved to your diary.' : 'Practice saved. Notice what changes over time.');
   };
+
+  const saveCheckIn = (bodyState: BodyState, minutes: number) => {
+    const date = localDate();
+    setData((current) => ({ ...current, dailyCheckIns: [{ date, bodyState, minutes }, ...current.dailyCheckIns.filter((item) => item.date !== date)], updatedAt: new Date().toISOString() }));
+    setToast('Today’s context is saved. Suggestions have adjusted.');
+  };
+
+  const updateProfile = (profile: UserProfile) => setData((current) => ({ ...current, profile, updatedAt: new Date().toISOString() }));
+  const resetData = () => { browserProgressRepository.clear(); setData(createDefaultData()); setScreen('today'); setToast('Local Happy Body data has been reset.'); };
+
+  if (!ready) return <main className="loading-shell"><span className="result-flower">✦</span><p>Preparing your Happy Body…</p></main>;
+  if (!data.profile.onboardingCompleted) return <Onboarding initial={data.profile} onComplete={completeOnboarding} />;
+  if (assessment) return <AssessmentFlow data={data} mode={assessment.mode} pathwayId={assessment.pathwayId} onResult={saveAssessmentResult} onClose={() => { setAssessment(null); setScreen('today'); }} />;
 
   return (
     <main className="app-shell">
-      <Header screen={screen} navigate={navigate} sync={sync} openAccount={() => setShowAccount(true)} />
+      <Header screen={screen} data={data} sync={sync} navigate={navigate} openAccount={() => setShowAccount(true)} />
       <div className="app-page">
-        {screen === 'dashboard' && <Dashboard progress={progress} navigate={navigate} startAssessment={startAssessment} />}
-        {screen === 'goals' && <Goals progress={progress} toggleGoal={toggleGoal} startAssessment={startAssessment} navigate={navigate} />}
-        {screen === 'assessment' && (
-          <Assessment
-            pathwayId={activePathwayId}
-            setPathwayId={startAssessment}
-            step={assessmentStep}
-            result={assessmentResult}
-            answer={answerAssessment}
-            restart={() => startAssessment(activePathwayId)}
-            navigate={navigate}
-          />
-        )}
-        {screen === 'next-step' && (
-          <NextStep
-            pathwayId={activePathwayId}
-            setPathwayId={(id) => setActivePathwayId(id)}
-            levelIndex={currentLevelIndex}
-            openPractice={() => { setShowPracticeForm(true); setSavedMessage(''); }}
-            startAssessment={startAssessment}
-          />
-        )}
-        {screen === 'journey' && (
-          <Journey progress={progress} openPractice={() => setShowPracticeForm(true)} startAssessment={startAssessment} />
-        )}
+        {screen === 'today' && <TodayScreen data={data} navigate={navigate} saveCheckIn={saveCheckIn} openPractice={setPractice} startAssessment={startAssessment} />}
+        {screen === 'progress' && <ProgressScreen data={data} startAssessment={startAssessment} />}
+        {screen === 'explore' && <ExploreScreen data={data} updateProfile={updateProfile} startAssessment={startAssessment} openPractice={setPractice} />}
+        {screen === 'diary' && <DiaryScreen data={data} openPractice={setPractice} />}
+        {screen === 'settings' && <SettingsScreen data={data} updateProfile={updateProfile} repeatOnboarding={() => updateProfile({ ...data.profile, onboardingCompleted: false })} repeatAssessment={() => startAssessment()} openAccount={() => setShowAccount(true)} importData={(next) => { setData(next); setScreen(next.preferences.lastScreen); }} resetData={resetData} />}
       </div>
-
       <MobileNav screen={screen} navigate={navigate} />
-      {showPracticeForm && (
-        <PracticeDialog
-          pathwayId={activePathwayId}
-          levelIndex={currentLevelIndex}
-          close={() => setShowPracticeForm(false)}
-          save={savePractice}
-        />
-      )}
+      {practice !== undefined && <PracticeDialog recommendation={practice} close={() => setPractice(undefined)} save={savePractice} />}
       {showAccount && <AccountDialog sync={sync} close={() => setShowAccount(false)} />}
-      {savedMessage && <div className="toast" role="status">✓ {savedMessage}</div>}
+      {toast && <div className="toast" role="status">{toast}</div>}
     </main>
   );
-}
-
-function Brand() {
-  return (
-    <span className="brand">
-      {/* eslint-disable-next-line @next/next/no-img-element -- the small local PWA mark is already optimized */}
-      <img className="brand-mark" src="./logo-mark.png" alt="" aria-hidden="true" />
-      <span>Happy Body</span>
-    </span>
-  );
-}
-
-function Header({ screen, navigate, sync, openAccount }: { screen: ScreenId; navigate: (screen: ScreenId) => void; sync: ProgressSync; openAccount: () => void }) {
-  const initial = sync.user?.email?.slice(0, 1).toUpperCase() ?? 'A';
-  return (
-    <header className="topbar">
-      <button className="brand-button" onClick={() => navigate('dashboard')} aria-label="Happy Body home"><Brand /></button>
-      <nav className="desktop-nav" aria-label="Primary navigation">
-        {navItems.map((item) => (
-          <button key={item.id} className={screen === item.id ? 'active' : ''} onClick={() => navigate(item.id)}>{item.label}</button>
-        ))}
-      </nav>
-      <button className={`avatar sync-${sync.status}`} onClick={openAccount} aria-label={`Account and progress sync: ${sync.status}`}>
-        {initial}<span className="sync-dot" aria-hidden="true" />
-      </button>
-    </header>
-  );
-}
-
-function MobileNav({ screen, navigate }: { screen: ScreenId; navigate: (screen: ScreenId) => void }) {
-  const items = navItems.filter((item) => item.id !== 'next-step');
-  return (
-    <nav className="bottom-nav" aria-label="Mobile navigation">
-      {items.map((item) => (
-        <button key={item.id} className={screen === item.id ? 'active' : ''} onClick={() => navigate(item.id)}>
-          <span aria-hidden="true">{item.icon}</span>{item.shortLabel}
-        </button>
-      ))}
-    </nav>
-  );
-}
-
-function Dashboard({
-  progress,
-  navigate,
-  startAssessment,
-}: {
-  progress: UserProgress;
-  navigate: (screen: ScreenId, pathwayId?: PathwayId) => void;
-  startAssessment: (pathwayId: PathwayId) => void;
-}) {
-  const featuredId = progress.selectedGoals[0] ?? 'squat';
-  const featured = pathwayById[featuredId];
-  const featuredLevel = featured.levels[progress.currentLevels[featuredId] ?? 0];
-  const recent = progress.practices.slice(0, 3);
-
-  return (
-    <>
-      <section className="welcome-card">
-        <div className="welcome-copy">
-          <p className="eyebrow">MY HAPPY BODY</p>
-          <h1>Move well.<br />Feel more like you.</h1>
-          <p className="lead">Understand what your body can do today, then take one clear and achievable next step.</p>
-          <button className="primary-button" onClick={() => navigate('next-step', featuredId)}>Continue my next step <span aria-hidden="true">→</span></button>
-        </div>
-        <BodyIllustration />
-      </section>
-
-      <section className="section-block" aria-labelledby="pathways-title">
-        <div className="section-heading">
-          <div><p className="eyebrow">YOUR PATHWAYS</p><h2 id="pathways-title">What you’re growing</h2></div>
-          <button className="text-button" onClick={() => navigate('goals')}>Explore all goals</button>
-        </div>
-        <div className="goal-grid">
-          {progress.selectedGoals.map((id) => {
-            const pathway = pathwayById[id];
-            const levelIndex = progress.currentLevels[id] ?? 0;
-            const level = pathway.levels[levelIndex];
-            return (
-              <article className={`goal-card ${pathway.tone}`} key={id}>
-                <div className="goal-topline"><span className="goal-mark">{pathway.symbol}</span><span className="level-chip">Level {levelIndex + 1} of {pathway.levels.length}</span></div>
-                <h3>{pathway.name}</h3><p>{level.title}</p>
-                <div className="progress-track" aria-label={`Level ${levelIndex + 1} of ${pathway.levels.length}`}><span style={{ width: `${((levelIndex + 1) / pathway.levels.length) * 100}%` }} /></div>
-                <button className="card-link" onClick={() => navigate('next-step', id)}>View next step <span aria-hidden="true">↗</span></button>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="next-step-card">
-        <div className="step-date"><span>YOUR NEXT STEP</span><strong>Today</strong></div>
-        <div className="step-copy">
-          <div className="movement-glyph" aria-hidden="true"><span /></div>
-          <div><p className="eyebrow">{featured.longName.toUpperCase()} · 8 MIN</p><h2>{featuredLevel.exercises[0].title}</h2><p>{featuredLevel.exercises[0].purpose}</p></div>
-        </div>
-        <button className="round-button" onClick={() => navigate('next-step', featuredId)} aria-label="Open today’s next step">→</button>
-      </section>
-
-      <div className="dashboard-lower">
-        <section className="activity-card">
-          <div className="section-heading compact"><div><p className="eyebrow">RECENT PRACTICE</p><h2>Small steps add up</h2></div><button className="text-button" onClick={() => navigate('journey')}>My journey</button></div>
-          {recent.length ? recent.map((entry) => (
-            <div className="activity-row" key={entry.id}><span className="activity-dot" /><div><strong>{entry.exerciseTitle}</strong><small>{pathwayById[entry.pathwayId].name} · {formatDate(entry.date)}</small></div><b>{entry.sets ? `${entry.sets} sets` : 'Practised'}</b></div>
-          )) : (
-            <div className="empty-state"><span>◌</span><div><strong>Your first practice will appear here.</strong><p>Record what you tried, not just what you achieved.</p></div><button className="secondary-button" onClick={() => navigate('next-step', featuredId)}>See today’s step</button></div>
-          )}
-        </section>
-        <aside className="check-in-card"><span className="sunburst">✦</span><p className="eyebrow">A USEFUL CHECK-IN</p><h2>Has this movement changed?</h2><p>Repeat a simple assessment whenever your current exercises begin to feel easier.</p><button className="soft-button" onClick={() => startAssessment(featuredId)}>Find my level</button></aside>
-      </div>
-      <PainNote />
-    </>
-  );
-}
-
-function BodyIllustration() {
-  return (
-    <div className="body-orbit" aria-label="Abstract illustration of balanced movement">
-      <span className="sun" /><span className="orbit orbit-one" /><span className="orbit orbit-two" />
-      <span className="figure-head" /><span className="figure-body" /><span className="leaf leaf-one" /><span className="leaf leaf-two" />
-    </div>
-  );
-}
-
-function Goals({
-  progress,
-  toggleGoal,
-  startAssessment,
-  navigate,
-}: {
-  progress: UserProgress;
-  toggleGoal: (id: PathwayId) => void;
-  startAssessment: (id: PathwayId) => void;
-  navigate: (screen: ScreenId, id?: PathwayId) => void;
-}) {
-  const futureStrength = ['Horizontal Pull', 'Vertical Push', 'Core', 'Knee Flexion'];
-  const futureMobility = ['Shoulders', 'Spine', 'Hips', 'Hamstrings', 'Ankles', 'Wrists', 'Whole-body flow'];
-  return (
-    <>
-      <PageIntro eyebrow="EXPLORE GOALS" title="What would you like your body to do?" body="Choose the pathways that matter to you. Each one turns a distant goal into a series of calm, achievable steps." />
-      <section className="pathway-list" aria-label="Available strength pathways">
-        {pathways.map((pathway) => {
-          const selected = progress.selectedGoals.includes(pathway.id);
-          const levelIndex = progress.currentLevels[pathway.id] ?? 0;
-          return (
-            <article className={`pathway-card ${pathway.tone}`} key={pathway.id}>
-              <div className="pathway-symbol">{pathway.symbol}</div>
-              <div className="pathway-main"><p className="eyebrow">{pathway.longName}</p><h2>{pathway.name} <span>towards {pathway.destination}</span></h2><p>{pathway.description}</p><div className="level-dots" aria-label={`Current level ${levelIndex + 1}`}>{pathway.levels.map((_, index) => <i key={index} className={index <= levelIndex ? 'filled' : ''} />)}</div></div>
-              <div className="pathway-actions"><button className={selected ? 'selected-button' : 'secondary-button'} onClick={() => toggleGoal(pathway.id)}>{selected ? '✓ Chosen goal' : '+ Add goal'}</button><button className="text-button" onClick={() => startAssessment(pathway.id)}>Find my level →</button><button className="quiet-link" onClick={() => navigate('next-step', pathway.id)}>See progression</button></div>
-            </article>
-          );
-        })}
-      </section>
-      <section className="coming-soon-grid">
-        <div className="coming-card"><p className="eyebrow">MORE STRENGTH PATHWAYS</p><h2>Growing next</h2><div>{futureStrength.map((name) => <span key={name}>{name}<small>Coming soon</small></span>)}</div></div>
-        <div className="coming-card mobility"><p className="eyebrow">MOBILITY PATHWAYS</p><h2>Room to move</h2><div>{futureMobility.map((name) => <span key={name}>{name}<small>Planned</small></span>)}</div></div>
-      </section>
-    </>
-  );
-}
-
-function Assessment({
-  pathwayId,
-  setPathwayId,
-  step,
-  result,
-  answer,
-  restart,
-  navigate,
-}: {
-  pathwayId: PathwayId;
-  setPathwayId: (id: PathwayId) => void;
-  step: number;
-  result: number | null;
-  answer: (passed: boolean) => void;
-  restart: () => void;
-  navigate: (screen: ScreenId, id?: PathwayId) => void;
-}) {
-  const pathway = pathwayById[pathwayId];
-  const checkpoint = pathway.assessment[step];
-  return (
-    <>
-      <PageIntro eyebrow="FIND MY LEVEL" title="Meet your body where it is today." body="This is a simple self-check, not a test to win. Choose the answer that reflects a calm, honest attempt." />
-      <PathwayTabs active={pathwayId} select={setPathwayId} />
-      {result === null ? (
-        <section className="assessment-shell">
-          <div className="assessment-progress"><span>CHECK {step + 1} OF {pathway.assessment.length}</span><div>{pathway.assessment.map((_, index) => <i className={index <= step ? 'filled' : ''} key={index} />)}</div></div>
-          <div className="assessment-content">
-            <div className="assessment-visual"><span className="assessment-number">0{step + 1}</span><div className="pose-lines"><i /><i /><i /></div></div>
-            <div className="assessment-copy"><p className="eyebrow">{pathway.longName}</p><h2>{checkpoint.title}</h2><p className="assessment-instruction">{checkpoint.instruction}</p><div className="criteria"><strong>What “comfortable” means here</strong><span>{checkpoint.passCriteria}</span></div><div className="answer-buttons"><button className="answer-yes" onClick={() => answer(true)}>Yes, comfortably <span>→</span></button><button onClick={() => answer(false)}>Not yet / not today</button></div></div>
-          </div>
-          <PainNote compact />
-        </section>
-      ) : (
-        <section className="result-card">
-          <span className="result-flower">✦</span><p className="eyebrow">YOUR CURRENT STARTING POINT</p><h1>{pathway.levels[result].title}</h1><p>{pathway.levels[result].description}</p><div className="result-path"><span>Today</span>{pathway.levels.map((level, index) => <i key={level.id} className={index <= result ? 'filled' : ''} title={level.title} />)}<span>{pathway.destination}</span></div><div className="result-actions"><button className="primary-button" onClick={() => navigate('next-step', pathwayId)}>Discover my next step →</button><button className="secondary-button" onClick={restart}>Repeat assessment</button></div><small>Your result is saved to your journey and syncs when you’re signed in.</small>
-        </section>
-      )}
-    </>
-  );
-}
-
-function NextStep({
-  pathwayId,
-  setPathwayId,
-  levelIndex,
-  openPractice,
-  startAssessment,
-}: {
-  pathwayId: PathwayId;
-  setPathwayId: (id: PathwayId) => void;
-  levelIndex: number;
-  openPractice: () => void;
-  startAssessment: (id: PathwayId) => void;
-}) {
-  const pathway = pathwayById[pathwayId];
-  const level = pathway.levels[levelIndex];
-  const isLast = levelIndex === pathway.levels.length - 1;
-  const next = pathway.levels[Math.min(levelIndex + 1, pathway.levels.length - 1)];
-  return (
-    <>
-      <PageIntro eyebrow="MY NEXT STEP" title="A clear place to begin." body="Practise the level that matches you now. Quality, comfort and consistency matter more than rushing ahead." />
-      <PathwayTabs active={pathwayId} select={setPathwayId} />
-      <section className={`level-hero ${pathway.tone}`}>
-        <div><p className="eyebrow">CURRENT LEVEL · {levelIndex + 1} OF {pathway.levels.length}</p><h1>{level.title}</h1><p>{level.description}</p><div className="milestone-box"><span>Ready to progress when</span><strong>{level.milestone}</strong></div></div>
-        <div className="level-map">{pathway.levels.map((item, index) => <div key={item.id} className={index === levelIndex ? 'current' : index < levelIndex ? 'done' : ''}><i>{index < levelIndex ? '✓' : index + 1}</i><span>{item.title}</span></div>)}</div>
-      </section>
-      <section className="exercise-section">
-        <div className="section-heading"><div><p className="eyebrow">PRACTISE THIS</p><h2>Your suggested exercises</h2></div><button className="primary-button small" onClick={openPractice}>+ Record practice</button></div>
-        <div className="exercise-grid">
-          {level.exercises.map((exercise) => (
-            <article className="exercise-card" key={exercise.id}>
-              <div className="video-wrap"><iframe src={`https://www.youtube-nocookie.com/embed/${exercise.videoId}`} title={`${exercise.title} demonstration`} loading="lazy" referrerPolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /></div>
-              <div className="exercise-body"><div className="exercise-title"><div><p className="eyebrow">{pathway.name}</p><h3>{exercise.title}</h3></div><span>{exercise.prescription}</span></div><p>{exercise.purpose}</p><ol>{exercise.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol><button className="text-button" onClick={openPractice}>I practised this →</button></div>
-            </article>
-          ))}
-        </div>
-      </section>
-      <section className="next-level-callout"><span className="goal-mark">{isLast ? '✦' : levelIndex + 2}</span><div><p className="eyebrow">{isLast ? 'WHERE THIS LEADS' : 'NEXT ACHIEVABLE LEVEL'}</p><h2>{isLast ? pathway.destination : next.title}</h2><p>{isLast ? 'Keep refining quality, confidence and ease in this advanced movement.' : next.description}</p></div><button className="secondary-button" onClick={() => startAssessment(pathwayId)}>Reassess my level</button></section>
-      <PainNote />
-    </>
-  );
-}
-
-function Journey({ progress, openPractice, startAssessment }: { progress: UserProgress; openPractice: () => void; startAssessment: (id: PathwayId) => void }) {
-  const events = useMemo(() => [
-    ...progress.practices.map((entry) => ({ type: 'practice' as const, id: entry.id, date: entry.date, pathwayId: entry.pathwayId, title: entry.exerciseTitle, detail: `${entry.sets ?? '—'} sets · Felt ${['', 'very easy', 'easy', 'moderate', 'challenging', 'very hard'][entry.difficulty]}` })),
-    ...progress.assessments.map((entry) => ({ type: 'assessment' as const, id: entry.id, date: entry.date, pathwayId: entry.pathwayId, title: `Level found: ${entry.levelTitle}`, detail: 'Self-assessment' })),
-  ].sort((a, b) => b.date.localeCompare(a.date)), [progress]);
-  const totalMinutes = progress.practices.length * 8;
-  return (
-    <>
-      <div className="journey-intro"><PageIntro eyebrow="MY JOURNEY" title="Notice what is changing." body="Your journey is more than numbers. Keep a gentle record of practice, effort, body feedback and meaningful milestones." /><button className="primary-button" onClick={openPractice}>+ Record a practice</button></div>
-      <section className="journey-stats"><div><span>{progress.practices.length}</span><small>practices recorded</small></div><div><span>{totalMinutes}</span><small>approx. minutes</small></div><div><span>{progress.assessments.length}</span><small>assessments</small></div><div><span>{progress.milestones.length}</span><small>level changes</small></div></section>
-      <div className="journey-layout">
-        <section className="timeline-card"><div className="section-heading compact"><div><p className="eyebrow">HISTORY</p><h2>Your recent moments</h2></div></div>{events.length ? <div className="timeline">{events.map((event) => <article key={`${event.type}-${event.id}`}><span className={`timeline-icon ${event.type}`}>{event.type === 'practice' ? '↟' : '◎'}</span><div><time>{formatDate(event.date)}</time><h3>{event.title}</h3><p>{pathwayById[event.pathwayId].name} · {event.detail}</p></div></article>)}</div> : <div className="journey-empty"><span>○</span><h3>Your journey starts with noticing.</h3><p>Record a practice or complete an assessment to create your first entry.</p><button className="secondary-button" onClick={openPractice}>Record practice</button></div>}</section>
-        <aside className="milestones-card"><p className="eyebrow">MILESTONES</p><h2>Moments worth keeping</h2>{progress.milestones.length ? progress.milestones.map((milestone, index) => <div className="milestone-row" key={`${milestone}-${index}`}><span>✦</span><p>{milestone}</p></div>) : <p className="muted-copy">Level changes will appear here after you reassess.</p>}<button className="soft-button" onClick={() => startAssessment(progress.selectedGoals[0] ?? 'squat')}>Repeat an assessment</button><div className="privacy-note"><strong>Private by default</strong><p>Your notes remain on this device. Sign in from the profile button to sync them privately across your devices.</p></div></aside>
-      </div>
-    </>
-  );
-}
-
-function AccountDialog({ sync, close }: { sync: ProgressSync; close: () => void }) {
-  const [email, setEmail] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState('');
-  const [formError, setFormError] = useState('');
-
-  const sendLink = async (event: FormEvent) => {
-    event.preventDefault();
-    setBusy(true);
-    setFormError('');
-    setMessage('');
-    try {
-      await sync.sendMagicLink(email.trim());
-      setMessage('Check your email and open the Happy Body sign-in link on this device.');
-    } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'We could not send the sign-in link.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const signInWithGoogle = async (credential: string, nonce: string) => {
-    setBusy(true);
-    setFormError('');
-    setMessage('');
-    try {
-      await sync.signInWithGoogle(credential, nonce);
-    } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'We could not complete Google sign-in.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const signOut = async () => {
-    setBusy(true);
-    setFormError('');
-    try {
-      await sync.signOut();
-      setMessage('Signed out. Your progress is still available on this device.');
-    } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'We could not sign you out.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const statusCopy = {
-    local: 'Saved on this device',
-    connecting: 'Connecting to your journey…',
-    syncing: 'Saving your latest changes…',
-    synced: 'Your journey is synced',
-    offline: 'Offline — changes will sync later',
-    error: 'Sync needs attention',
-  }[sync.status];
-
-  return (
-    <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) close(); }}>
-      <section className="practice-dialog account-dialog" role="dialog" aria-modal="true" aria-labelledby="account-title">
-        <div className="dialog-heading"><div><p className="eyebrow">ACCOUNT & SYNC</p><h2 id="account-title">Take your journey with you</h2></div><button onClick={close} aria-label="Close account settings">×</button></div>
-
-        {!sync.configured ? (
-          <div className="account-empty"><span aria-hidden="true">○</span><h3>Cloud sync is almost ready.</h3><p>Your progress continues to save safely on this device while the connection is completed.</p></div>
-        ) : sync.user ? (
-          <div className="account-signed-in">
-            <div className="account-identity"><span>{sync.user.email?.slice(0, 1).toUpperCase()}</span><div><small>Signed in as</small><strong>{sync.user.email}</strong></div></div>
-            <div className={`sync-status-card ${sync.status}`}><span className="sync-status-icon" aria-hidden="true">✓</span><div><strong>{statusCopy}</strong><small>{sync.lastSyncedAt ? `Last synced ${new Intl.DateTimeFormat('en', { hour: 'numeric', minute: '2-digit' }).format(new Date(sync.lastSyncedAt))}` : 'Your device keeps a local copy too.'}</small></div></div>
-            {(formError || sync.errorMessage) && <p className="form-message error" role="alert">{formError || sync.errorMessage}</p>}
-            {message && <p className="form-message success" role="status">{message}</p>}
-            <p className="account-help">Practices, assessments, levels and milestones are private to your account. If you lose connection, keep using Happy Body normally—changes will upload later.</p>
-            <div className="account-actions"><button className="secondary-button" onClick={signOut} disabled={busy}>Sign out</button><button className="primary-button" onClick={() => sync.syncNow()} disabled={busy || sync.status === 'syncing'}>Sync now</button></div>
-          </div>
-        ) : (
-          <form className="account-form" onSubmit={sendLink}>
-            <div className="account-intro"><span aria-hidden="true">↟</span><div><h3>One journey, on every device.</h3><p>Sign in to securely sync your goals, practices, assessments and milestones. Your existing progress will be brought with you.</p></div></div>
-            <GoogleSignInButton onCredential={signInWithGoogle} disabled={busy} onError={setFormError} />
-            <div className="account-divider"><span>or use email</span></div>
-            <label>Email address<input type="email" inputMode="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" required /></label>
-            <button className="primary-button account-submit" disabled={busy}>{busy ? 'Sending…' : 'Email me a sign-in link →'}</button>
-            {formError && <p className="form-message error" role="alert">{formError}</p>}
-            {message && <p className="form-message success" role="status">{message}</p>}
-            <p className="account-fine-print">No password needed. Google shares only your basic profile and email, which identify your private Happy Body account.</p>
-          </form>
-        )}
-      </section>
-    </div>
-  );
-}
-
-function GoogleSignInButton({
-  onCredential,
-  disabled,
-  onError,
-}: {
-  onCredential: (credential: string, nonce: string) => Promise<void>;
-  disabled: boolean;
-  onError: (message: string) => void;
-}) {
-  const buttonRef = useRef<HTMLDivElement>(null);
-  const onCredentialRef = useRef(onCredential);
-  const onErrorRef = useRef(onError);
-  const [loading, setLoading] = useState(true);
-  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-
-  useEffect(() => {
-    onCredentialRef.current = onCredential;
-    onErrorRef.current = onError;
-  }, [onCredential, onError]);
-
-  useEffect(() => {
-    let active = true;
-    let resizeObserver: ResizeObserver | null = null;
-
-    const prepare = async () => {
-      if (!googleClientId) {
-        if (active) {
-          setLoading(false);
-          onErrorRef.current('Google sign-in has not been configured yet.');
-        }
-        return;
-      }
-
-      try {
-        const [googleIdentity, { nonce, hashedNonce }] = await Promise.all([
-          loadGoogleIdentity(),
-          createGoogleNonce(),
-        ]);
-        if (!active || !buttonRef.current) return;
-
-        googleIdentity.initialize({
-          client_id: googleClientId,
-          callback: (response) => {
-            if (!response.credential) {
-              onErrorRef.current('Google did not return a sign-in credential. Please try again.');
-              return;
-            }
-            void onCredentialRef.current(response.credential, nonce);
-          },
-          nonce: hashedNonce,
-          auto_select: false,
-          cancel_on_tap_outside: true,
-          context: 'signin',
-          itp_support: true,
-          ux_mode: 'popup',
-          use_fedcm_for_prompt: true,
-        });
-
-        const render = () => {
-          const target = buttonRef.current;
-          if (!target) return;
-          target.replaceChildren();
-          googleIdentity.renderButton(target, {
-            type: 'standard',
-            theme: 'outline',
-            size: 'large',
-            shape: 'pill',
-            text: 'continue_with',
-            logo_alignment: 'left',
-            width: String(Math.min(400, Math.max(240, Math.floor(target.clientWidth)))),
-          });
-        };
-
-        render();
-        resizeObserver = new ResizeObserver(render);
-        resizeObserver.observe(buttonRef.current);
-        setLoading(false);
-      } catch (error) {
-        if (!active) return;
-        setLoading(false);
-        onErrorRef.current(error instanceof Error ? error.message : 'Google sign-in could not be loaded.');
-      }
-    };
-
-    void prepare();
-    return () => {
-      active = false;
-      resizeObserver?.disconnect();
-    };
-  }, [googleClientId]);
-
-  return (
-    <div className={`google-sign-in-shell${disabled ? ' disabled' : ''}`} aria-busy={loading || disabled}>
-      <div ref={buttonRef} className="google-sign-in-frame" />
-      {loading && <span className="google-sign-in-loading">Preparing secure Google sign-in…</span>}
-    </div>
-  );
-}
-
-function PracticeDialog({ pathwayId, levelIndex, close, save }: { pathwayId: PathwayId; levelIndex: number; close: () => void; save: (entry: PracticeEntry) => void }) {
-  const [selectedPathwayId, setSelectedPathwayId] = useState<PathwayId>(pathwayId);
-  const pathway = pathwayById[selectedPathwayId];
-  const exercises = pathway.levels.flatMap((level) => level.exercises);
-  const [exerciseId, setExerciseId] = useState(pathway.levels[levelIndex]?.exercises[0]?.id ?? exercises[0].id);
-  const [date, setDate] = useState(today());
-  const [sets, setSets] = useState('2');
-  const [amount, setAmount] = useState('8');
-  const [difficulty, setDifficulty] = useState(3);
-  const [bodyDuring, setBodyDuring] = useState('Comfortable');
-  const [bodyAfter, setBodyAfter] = useState('Energised');
-  const [notes, setNotes] = useState('');
-  const [videoUrl, setVideoUrl] = useState('');
-
-  const updatePathway = (value: string) => {
-    if (!isPathwayId(value)) return;
-    setSelectedPathwayId(value);
-    setExerciseId(pathwayById[value].levels[0].exercises[0].id);
-  };
-
-  const exercise = exercises.find((item) => item.id === exerciseId) ?? exercises[0];
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    save({ id: uid(), date, pathwayId: selectedPathwayId, exerciseId: exercise.id, exerciseTitle: exercise.title, sets: Number(sets) || null, amount: Number(amount) || null, metric: exercise.metric, difficulty, bodyDuring, bodyAfter, notes: notes.trim(), videoUrl: videoUrl.trim() });
-  };
-
-  return (
-    <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) close(); }}>
-      <section className="practice-dialog" role="dialog" aria-modal="true" aria-labelledby="practice-title">
-        <div className="dialog-heading"><div><p className="eyebrow">MY PRACTICE</p><h2 id="practice-title">Record what you noticed</h2></div><button onClick={close} aria-label="Close practice form">×</button></div>
-        <form onSubmit={submit}>
-          <div className="form-grid"><label>Date<input type="date" value={date} onChange={(event) => setDate(event.target.value)} required /></label><label>Movement goal<select value={selectedPathwayId} onChange={(event) => updatePathway(event.target.value)}>{pathways.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label></div>
-          <label>Exercise or progression<select value={exerciseId} onChange={(event) => setExerciseId(event.target.value)}>{exercises.map((item) => <option value={item.id} key={item.id}>{item.title}</option>)}</select></label>
-          <div className="form-grid"><label>Sets<input inputMode="numeric" type="number" min="0" value={sets} onChange={(event) => setSets(event.target.value)} /></label><label>{exercise.metric === 'seconds' ? 'Hold time (seconds)' : 'Repetitions'}<input inputMode="numeric" type="number" min="0" value={amount} onChange={(event) => setAmount(event.target.value)} /></label></div>
-          <fieldset><legend>How difficult did it feel?</legend><div className="difficulty-options">{[1, 2, 3, 4, 5].map((value) => <button type="button" key={value} className={difficulty === value ? 'active' : ''} onClick={() => setDifficulty(value)}><span>{value}</span><small>{['', 'Easy', 'Light', 'Steady', 'Hard', 'Very hard'][value]}</small></button>)}</div></fieldset>
-          <div className="form-grid"><label>During practice<select value={bodyDuring} onChange={(event) => setBodyDuring(event.target.value)}><option>Comfortable</option><option>Stiff</option><option>Unsteady</option><option>Tired</option><option>Painful — I stopped</option></select></label><label>After practice<select value={bodyAfter} onChange={(event) => setBodyAfter(event.target.value)}><option>Energised</option><option>Calm</option><option>About the same</option><option>Tired</option><option>Sore or painful</option></select></label></div>
-          <label>Personal notes<textarea rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="What felt easier, different or worth remembering?" /></label>
-          <label>Optional YouTube progress-video link<input type="url" value={videoUrl} onChange={(event) => setVideoUrl(event.target.value)} placeholder="https://youtube.com/..." /></label>
-          <PainNote compact />
-          <div className="form-actions"><button type="button" className="secondary-button" onClick={close}>Cancel</button><button className="primary-button" type="submit">Save practice →</button></div>
-        </form>
-      </section>
-    </div>
-  );
-}
-
-function PageIntro({ eyebrow, title, body }: { eyebrow: string; title: string; body: string }) {
-  return <section className="page-intro"><p className="eyebrow">{eyebrow}</p><h1>{title}</h1><p>{body}</p></section>;
-}
-
-function PathwayTabs({ active, select }: { active: PathwayId; select: (id: PathwayId) => void }) {
-  return <div className="pathway-tabs" role="tablist" aria-label="Choose a movement pathway">{pathways.map((pathway) => <button role="tab" aria-selected={active === pathway.id} className={active === pathway.id ? 'active' : ''} key={pathway.id} onClick={() => select(pathway.id)}><span>{pathway.symbol}</span>{pathway.name}</button>)}</div>;
-}
-
-function PainNote({ compact = false }: { compact?: boolean }) {
-  return <aside className={`pain-note ${compact ? 'compact' : ''}`}><span aria-hidden="true">✦</span><p><strong>Listen to your body.</strong> Happy Body does not diagnose injuries. Stop if you feel sharp, worsening or unexplained pain, and consult a qualified healthcare professional.</p></aside>;
 }

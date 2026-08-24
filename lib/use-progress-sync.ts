@@ -4,9 +4,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { hasMeaningfulLocalProgress, loadCloudProgress, mergeProgress, saveCloudProgress } from '@/lib/cloud-progress';
-import { defaultProgress } from '@/lib/storage';
+import { createDefaultData } from '@/lib/storage';
 import { isCloudSyncConfigured, supabase } from '@/lib/supabase';
-import type { UserProgress } from '@/lib/types';
+import type { HappyBodyData } from '@/lib/types';
 
 const SYNC_META_KEY = 'happy-body-sync-meta-v1';
 
@@ -34,8 +34,8 @@ function writeMeta(meta: SyncMeta) {
 }
 
 export function useProgressSync(
-  progress: UserProgress,
-  setProgress: Dispatch<SetStateAction<UserProgress>>,
+  progress: HappyBodyData,
+  setProgress: Dispatch<SetStateAction<HappyBodyData>>,
   ready: boolean,
 ) {
   const [user, setUser] = useState<User | null>(null);
@@ -67,7 +67,7 @@ export function useProgressSync(
       const firstLink = !meta.linkedUserId;
       const preferLocal = forcePreferLocal ?? (meta.dirty || (firstLink && hasMeaningfulLocalProgress(local)));
       const merged = isDifferentAccount
-        ? (cloud ?? defaultProgress)
+        ? (cloud ?? createDefaultData())
         : cloud
           ? mergeProgress(local, cloud, preferLocal)
           : local;

@@ -11,7 +11,8 @@
     "build": "vinext build",
     "build:pages": "next build",
     "start": "vinext start",
-    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next"
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
+    "test": "node scripts/test-recommendations.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",

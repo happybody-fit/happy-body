@@ -1,8 +1,21 @@
 # Happy Body
 
-A mobile-first static web app and installable PWA that helps people understand their current movement level, find a useful next step and record progress. It works without an account and offers optional passwordless sign-in for private multi-device syncing.
+Happy Body is a calm, mobile-first personal movement guide. It helps a person understand what their body can do now, keep unknowns honest, and choose a useful next step without turning movement into a competition.
 
-The prototype includes Squat, Push-up and Pull-up pathways. Product assumptions, the screen map and the extensible data model are documented in [`docs/MVP.md`](docs/MVP.md).
+The current version includes:
+
+- seven-step onboarding with goals, limitations, time, practice style and equipment;
+- a Body Map with explicit unknown, assessed, in-progress, achieved, reassessment, temporary-limitation and pain states;
+- a nuanced foundation movement check and pathway-specific self-assessments;
+- a deterministic Today recommendation engine with pain, equipment, fatigue, recency, time and goal rules;
+- complete Squat (9), Push-up (10) and Pull-up (11) progression ladders;
+- three-tap quick practice logging plus optional details;
+- Progress, Explore, Diary and Settings experiences;
+- versioned `localStorage`, export/import/reset tools and safe migration from `happy-body-progress-v1`;
+- optional private Supabase account sync, Google sign-in and passwordless email sign-in;
+- an installable static PWA deployed on GitHub Pages.
+
+Product behavior and the exact recommendation rules are documented in [`docs/MVP.md`](docs/MVP.md).
 
 ## Preview locally
 
@@ -15,33 +28,33 @@ pnpm run dev
 
 Open the local address printed in the terminal, normally `http://localhost:3000`.
 
-Copy `.env.example` to `.env.local` and add the Supabase project URL and publishable key to test cloud sync locally. Never use a Supabase secret or service-role key in this static app.
+Copy `.env.example` to `.env.local` and add the Supabase project URL and publishable key to test optional cloud sync. Never place a Supabase service-role key or OAuth client secret in this static app.
 
-## Build the static GitHub Pages version
+## Verify
 
 ```bash
+pnpm test
+pnpm run lint
 pnpm run build:pages
 ```
 
-The static site is written to `out/`. You can preview that folder with any static file server.
+The static GitHub Pages output is written to `out/`.
 
 ## Publish with GitHub Pages
 
-1. Create an empty GitHub repository and push this project to its `main` branch.
-2. In **Settings → Pages**, choose **GitHub Actions** as the source.
-3. The included workflow builds and publishes every push to `main`.
-4. For a temporary `username.github.io/repository` address, create a repository Actions variable named `HAPPY_BODY_BASE_PATH` with the value `/repository`.
-5. For the final custom domain, leave `HAPPY_BODY_BASE_PATH` empty and set `HAPPY_BODY_SITE_URL` to the full `https://` domain.
-6. To enable account sync, add `HAPPY_BODY_SUPABASE_URL` and `HAPPY_BODY_SUPABASE_PUBLISHABLE_KEY` as repository Actions variables. These values are intentionally public in a browser app; data access is protected by Supabase row-level security.
+Every push to `main` is built and deployed by `.github/workflows/deploy-pages.yml`.
 
-## Connect a GoDaddy domain
+- `HAPPY_BODY_SITE_URL` should be `https://happybody.fit`.
+- `HAPPY_BODY_BASE_PATH` should remain empty for the custom domain.
+- `HAPPY_BODY_SUPABASE_URL` and `HAPPY_BODY_SUPABASE_PUBLISHABLE_KEY` are public browser configuration values; row-level security protects private data.
+- The Google OAuth client ID is a public identifier. Its secret remains only in Supabase.
 
-After the first Pages deployment, enter the chosen domain in GitHub under **Settings → Pages → Custom domain**. GitHub will show the exact DNS records to add in GoDaddy. Add those records, wait for DNS verification, and enable **Enforce HTTPS**.
-
-If using the root domain, GitHub normally requests `A`/`AAAA` records. If using `www`, it normally requests a `CNAME`. Follow the values GitHub displays for the repository rather than copying old DNS values from a tutorial.
+The domain remains configured in GitHub Pages and GoDaddy. The checked-in manifest and service worker support the custom-domain PWA.
 
 ## Local data and account sync
 
-Progress is always cached under `happy-body-progress-v1` in browser `localStorage`, so the app continues to work offline. A user can sign in with Google or request a passwordless email link; after sign-in, practices, assessments, pathway levels and milestones sync to Supabase. Existing local progress is migrated on first sign-in and later offline changes retry automatically.
+Version 2 data is stored under `happy-body-data-v2`. The app first checks for that document and otherwise safely reads the original `happy-body-progress-v1` record.
 
-The database definition is versioned in `supabase/migrations/`. Every progress table has row-level security tied to the signed-in user. The browser receives only the publishable key; privileged Supabase keys must never be exposed or committed.
+Untouched fake prototype defaults are not converted into real levels. Meaningful legacy practices, assessments and milestones are preserved and mapped onto the expanded progression ladders.
+
+Signed-in accounts store the complete versioned document in Supabase `happy_body_state`. Row-level security restricts every record to its authenticated owner. The original normalized tables remain as a temporary compatibility fallback.
