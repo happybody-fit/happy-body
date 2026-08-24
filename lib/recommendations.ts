@@ -18,12 +18,6 @@ export const recommendationRules = {
   soreBody: -22,
 } as const;
 
-const pathwayGoal: Record<PathwayId, GoalId> = {
-  squat: 'pistol-squat',
-  'push-up': 'push-up',
-  'pull-up': 'pull-up',
-};
-
 const placeholderGoals: GoalId[] = ['front-split', 'middle-split', 'handstand', 'improve-mobility'];
 
 function dayNumber(date: string) {
@@ -42,7 +36,7 @@ function goalWeight(data: HappyBodyData, pathway: Pathway) {
     if (relevantGoals.has(goal)) score += recommendationRules.secondaryGoal;
   });
   data.profile.skillInterests.forEach((goal) => {
-    if (goal === pathwayGoal[pathway.id]) score += recommendationRules.skillInterest;
+    if (relevantGoals.has(goal)) score += recommendationRules.skillInterest;
   });
   return score;
 }
@@ -89,7 +83,7 @@ function pathwayCandidate(data: HappyBodyData, pathway: Pathway, today: string):
       movementId: pathway.id,
       pathwayId: pathway.id,
       title: `Give ${pathway.name.toLowerCase()} practice space today`,
-      reason: 'A pain response is flagged for this movement, so Happy Body will not suggest loading it.',
+      reason: 'A pain response is flagged for this movement, so we will not suggest loading it.',
       detail: 'Choose another comfortable area. Clear the flag only when you are ready to reassess calmly.',
       minutes: 0,
       score: scoreBase + 40,

@@ -61,12 +61,13 @@ export default function Home() {
   const saveAssessmentResult: React.ComponentProps<typeof AssessmentFlow>['onResult'] = ({ state, record, painBodyArea }) => {
     setData((current) => {
       const previous = current.movementStates[state.movementId];
-      const preserveAdvancedLevel = record.checkpointId.startsWith('goal-')
-        && previous?.currentLevel !== null
+      const preserveAdvancedLevel = previous?.currentLevel !== null
         && previous?.currentLevel !== undefined
-        && state.currentLevel !== null
-        && previous.currentLevel > state.currentLevel;
-      const nextState = preserveAdvancedLevel ? { ...state, currentLevel: previous.currentLevel, status: previous.status } : state;
+        && (
+          (record.checkpointId.startsWith('goal-') && state.currentLevel !== null && previous.currentLevel > state.currentLevel)
+          || (state.status === 'pain-flagged' && state.currentLevel === null)
+        );
+      const nextState = preserveAdvancedLevel ? { ...state, currentLevel: previous.currentLevel } : state;
       const newLevel = record.pathwayId && nextState.currentLevel !== null ? pathwayById[record.pathwayId].levels[nextState.currentLevel] : null;
       const levelChanged = Boolean(newLevel && previous?.currentLevel !== null && previous?.currentLevel !== undefined && previous.currentLevel !== nextState.currentLevel);
       return {

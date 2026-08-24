@@ -9,10 +9,27 @@ export type GoalId =
   | 'natural-movement'
   | 'push-up'
   | 'pull-up'
+  | 'bodyweight-row'
+  | 'front-lever'
+  | 'one-arm-pull-up'
+  | 'handstand-push-up'
+  | 'planche'
   | 'pistol-squat'
+  | 'nordic-curl'
+  | 'hip-extension-hinge'
+  | 'core-control'
+  | 'dragon-flag'
   | 'handstand'
+  | 'wall-handstand'
+  | 'handstand-walk'
+  | 'resting-squat'
+  | 'pike'
+  | 'pancake'
   | 'front-split'
-  | 'middle-split';
+  | 'middle-split'
+  | 'bridge'
+  | 'german-hang'
+  | 'rotation';
 
 export type EquipmentId =
   | 'none'
@@ -24,6 +41,7 @@ export type EquipmentId =
   | 'box-bench';
 
 export type BodyState = 'fresh' | 'steady' | 'stiff' | 'tired' | 'sore';
+export type InjuryContext = 'none' | 'yes' | 'unsure' | 'prefer-not';
 export type AssessmentOutcome = 'comfortable' | 'limited' | 'not-yet' | 'unsure' | 'no-equipment' | 'pain';
 export type MovementStatus =
   | 'unknown'
@@ -41,6 +59,10 @@ export interface UserProfile {
   skillInterests: GoalId[];
   limitations: string[];
   limitationNote: string;
+  injuryContext: InjuryContext | null;
+  injuryAreas: string[];
+  injuryNote: string;
+  movementAvoidance: string;
   defaultMinutes: number;
   practiceStyle: 'single-session' | 'movement-breaks' | 'either';
   movementBreaks: number;

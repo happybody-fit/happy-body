@@ -88,7 +88,7 @@ export function PainNote({ compact = false }: { compact?: boolean }) {
   return (
     <aside className={`pain-note ${compact ? 'compact' : ''}`}>
       <span aria-hidden="true">✦</span>
-      <p><strong>Listen to your body.</strong> Happy Body does not diagnose injuries. Stop if you feel sharp, worsening or unexplained pain, and consult a qualified healthcare professional.</p>
+      <p><strong>Listen to your body.</strong> We do not diagnose injuries. Stop if you feel sharp, worsening or unexplained pain, and consult a qualified healthcare professional.</p>
     </aside>
   );
 }

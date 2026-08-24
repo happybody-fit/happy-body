@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import { foundationChecks } from '@/data/assessments';
+import { foundationMapChecks } from '@/data/assessments';
 import { goalById, goalOptions } from '@/data/catalog';
 import { pathwayById, pathways } from '@/data/pathways';
 import { getRecommendations } from '@/lib/recommendations';
@@ -28,7 +28,11 @@ export function TodayScreen({
   const [minutes, setMinutes] = useState(checkIn?.minutes ?? data.profile.defaultMinutes);
   const recommendations = useMemo(() => getRecommendations(data, today), [data, today]);
   const greeting = data.profile.name.trim() ? `${data.profile.name.trim()}, what` : 'What';
-  const assessedCount = Object.values(data.movementStates).filter((state) => state.status !== 'unknown').length;
+  const currentMapIds = [...foundationMapChecks.map((check) => check.id), ...pathways.map((pathway) => pathway.id)];
+  const assessedCount = currentMapIds.filter((id) => {
+    const state = data.movementStates[id];
+    return Boolean(state && state.status !== 'unknown');
+  }).length;
   const movementWord = assessedCount === 1 ? 'movement' : 'movements';
 
   return (
@@ -74,7 +78,7 @@ function RecommendationCard({ item, featured, openPractice, startAssessment, nav
 }
 
 export function ProgressScreen({ data, startAssessment }: { data: HappyBodyData; startAssessment: (pathwayId?: PathwayId) => void }) {
-  const movementCards = foundationChecks.slice(0, 4).map((check) => ({ id: check.id, title: check.shortName, detail: check.why, pathwayId: null as PathwayId | null }));
+  const movementCards = foundationMapChecks.map((check) => ({ id: check.id, title: check.shortName, detail: check.why, pathwayId: null as PathwayId | null }));
   return (
     <>
       <PageIntro eyebrow="MY BODY MAP" title="A picture of what your body can do now." body="Assessed, unknown, changing and temporarily limited can all exist together. This map values capability without pretending every movement is known." action={<button className="primary-button" onClick={() => startAssessment()}>Repeat foundation check</button>} />
@@ -100,7 +104,7 @@ export function ExploreScreen({ data, updateProfile, startAssessment, openPracti
       <section className={`explore-hero ${pathway.tone}`}><div><p className="eyebrow">{pathway.longName}</p><h1>{pathway.name}</h1><p>{pathway.description}</p><div className="hero-actions"><button className="primary-button" onClick={() => startAssessment(pathway.id)}>{state?.currentLevel !== null && state?.currentLevel !== undefined ? 'Reassess my level' : 'Find my level'} →</button><button className={selected ? 'selected-button' : 'secondary-button'} onClick={toggle}>{selected ? '✓ In my goals' : '+ Add to my goals'}</button></div></div><div className="destination-medallion"><small>PATHWAY DESTINATION</small><strong>{pathway.destination}</strong></div></section>
       <section className="pathway-ladder"><div className="section-heading"><div><p className="eyebrow">THE PATHWAY</p><h2>From first contact to advanced capability</h2></div></div>{pathway.levels.map((level, index) => { const current = state?.currentLevel === index; const knownIndex = state?.currentLevel ?? -1; const done = knownIndex >= 0 && index < knownIndex; const item = level.exercises[0]; return <article className={`ladder-step ${current ? 'current' : ''} ${done ? 'done' : ''}`} key={level.id}><span className="step-index">{done ? '✓' : index + 1}</span><div className="ladder-main"><div><small>{current ? 'YOUR CURRENT STEP' : index === knownIndex + 1 ? 'NEXT VISIBLE STEP' : `LEVEL ${index + 1}`}</small><h3>{level.title}</h3><p>{level.description}</p></div><details><summary>Exercise guidance</summary><div><p><strong>{item.title}</strong> · {item.sets} sets · {item.reps ?? item.hold}</p><ul>{item.cues.map((cue) => <li key={cue}>{cue}</li>)}</ul><button className="text-button" onClick={() => openPractice({ id: `explore-${item.id}`, kind: 'practice', movementId: pathway.id, pathwayId: pathway.id, title: item.title, reason: 'You chose this from the full pathway.', detail: item.purpose, minutes: item.durationMinutes, score: 0, exerciseId: item.id })}>Practise or record this →</button></div></details></div><span className="milestone-copy">{level.milestone}</span></article>; })}</section>
       <SteadinessCard />
-      <section className="future-goals"><div><p className="eyebrow">VISIBLE, NOT INVENTED</p><h2>Goals waiting for verified pathways</h2><p>These can remain part of your direction. Happy Body will not assign made-up levels or random exercises while their content is being developed.</p></div><div className="future-goal-grid">{goalOptions.filter((goal) => ['handstand', 'front-split', 'middle-split'].includes(goal.id)).map((goal) => <span key={goal.id}><strong>{goal.label}</strong><small>Pathway planned</small></span>)}</div></section>
+      <section className="future-goals"><div><p className="eyebrow">VISIBLE, NOT INVENTED</p><h2>Goals waiting for verified pathways</h2><p>These can remain part of your direction. We will not assign made-up levels or random exercises while their content is being developed.</p></div><div className="future-goal-grid">{goalOptions.filter((goal) => ['handstand', 'front-split', 'middle-split'].includes(goal.id)).map((goal) => <span key={goal.id}><strong>{goal.label}</strong><small>Pathway planned</small></span>)}</div></section>
       <PainNote />
     </>
   );

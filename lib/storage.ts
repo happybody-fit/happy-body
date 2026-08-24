@@ -1,9 +1,9 @@
 import type { GoalId, HappyBodyData, LegacyUserProgress, MovementState, PathwayId } from './types';
+import { foundationStateIds } from '@/data/assessments';
 
 export const STORAGE_KEY = 'happy-body-data-v2';
 export const LEGACY_STORAGE_KEY = 'happy-body-progress-v1';
 
-const foundationMovementIds = ['deep-squat', 'overhead-reach', 'floor-sitting', 'floor-get-up'];
 const pathwayIds: PathwayId[] = ['squat', 'push-up', 'pull-up'];
 
 function unknownState(movementId: string): MovementState {
@@ -20,7 +20,7 @@ function unknownState(movementId: string): MovementState {
 
 export function createDefaultData(now = new Date().toISOString()): HappyBodyData {
   const movementStates = Object.fromEntries(
-    [...foundationMovementIds, ...pathwayIds].map((id) => [id, unknownState(id)]),
+    [...foundationStateIds, ...pathwayIds].map((id) => [id, unknownState(id)]),
   );
 
   return {
@@ -32,6 +32,10 @@ export function createDefaultData(now = new Date().toISOString()): HappyBodyData
       skillInterests: [],
       limitations: [],
       limitationNote: '',
+      injuryContext: null,
+      injuryAreas: [],
+      injuryNote: '',
+      movementAvoidance: '',
       defaultMinutes: 20,
       practiceStyle: 'either',
       movementBreaks: 2,

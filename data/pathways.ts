@@ -101,7 +101,7 @@ export const pathways: Pathway[] = [
     tone: 'peach',
     description: 'Build confident whole-body pushing strength from the wall towards advanced hand-supported shapes.',
     destination: 'Tuck-planche preparation',
-    goalIds: ['build-strength', 'push-up', 'natural-movement'],
+    goalIds: ['build-strength', 'push-up', 'planche', 'natural-movement'],
     levels: [
       level('wall-push-up', 'Wall push-up', 'Learn the pushing shape in a gentle upright position.', 'Complete twelve smooth wall push-ups.', exercise({ id: 'wall-push-up', title: 'Wall push-up', purpose: 'Build a connected pushing pattern with low load.', equipment: ['wall'], sets: 2, reps: '8–12', cues: ['Place hands just below shoulder height.', 'Move your body towards the wall as one line.', 'Press away without shrugging.'], videoId: pushVideo })),
       level('high-incline-push-up', 'High incline push-up', 'Use a sturdy chest-high surface to add a little more load.', 'Complete ten calm repetitions.', exercise({ id: 'high-incline-push-up', title: 'High incline push-up', purpose: 'Develop pushing strength while keeping the angle manageable.', equipment: ['box-bench'], sets: 3, reps: '6–10', cues: ['Choose a truly stable surface.', 'Keep ribs and hips connected.', 'Touch softly and press away.'], videoId: pushVideo })),
@@ -131,7 +131,7 @@ export const pathways: Pathway[] = [
     tone: 'sand',
     description: 'Develop grip, overhead confidence and pulling strength towards a one-arm pull-up.',
     destination: 'One-arm pull-up',
-    goalIds: ['build-strength', 'pull-up', 'natural-movement'],
+    goalIds: ['build-strength', 'pull-up', 'one-arm-pull-up', 'natural-movement'],
     levels: [
       level('feet-supported-hang', 'Feet-supported hang', 'Let your feet adjust how much weight your hands carry.', 'Hold comfortably for thirty seconds.', exercise({ id: 'feet-supported-hang', title: 'Feet-supported hang', purpose: 'Introduce grip and the overhead position with adjustable load.', equipment: ['pull-up-bar'], sets: 3, hold: '15–30 sec', cues: ['Keep your feet on the floor or a box.', 'Let your hands carry a comfortable amount.', 'Step down before your grip fails.'], videoId: pullVideo })),
       level('supported-active-hang', 'Supported active hang', 'Use the feet while learning to draw the shoulders away from the ears.', 'Hold an active position for twenty seconds.', exercise({ id: 'supported-active-hang', title: 'Supported active hang', purpose: 'Learn shoulder-blade control without carrying full bodyweight.', equipment: ['pull-up-bar'], sets: 3, hold: '10–20 sec', cues: ['Keep elbows straight.', 'Gently make your neck feel long.', 'Use your feet to keep the effort calm.'], videoId: pullVideo })),
