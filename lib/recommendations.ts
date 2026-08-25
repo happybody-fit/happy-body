@@ -71,6 +71,34 @@ function practiceAdjustment(data: HappyBodyData, pathwayId: PathwayId, today: st
   return Math.min(recommendationRules.neglectedDayCap, days * recommendationRules.eachNeglectedDay);
 }
 
+function practiceReason(data: HappyBodyData, pathway: Pathway, today: string, temporarilyLimited: boolean) {
+  if (temporarilyLimited) return 'We know this step, but we’re keeping it smaller and easier than usual today.';
+  const last = data.practices
+    .filter((entry) => entry.pathwayId === pathway.id && entry.completion !== 'not-today')
+    .sort((a, b) => b.date.localeCompare(a.date))[0];
+  const chosenGoals = [
+    ...(data.profile.primaryGoal ? [data.profile.primaryGoal] : []),
+    ...data.profile.secondaryGoals,
+    ...data.profile.skillInterests,
+  ];
+  const supportsChosenGoal = chosenGoals.some((goal) => pathway.goalIds.includes(goal));
+  const wholeBodyFocus: Record<PathwayId, string> = {
+    squat: 'lower-body strength',
+    'push-up': 'pushing strength',
+    'pull-up': 'pulling strength',
+  };
+  if (!last) {
+    return supportsChosenGoal
+      ? `This supports a goal you chose through the ${pathway.name.toLowerCase()} step we already know.`
+      : `This keeps ${wholeBodyFocus[pathway.id]} in your whole-body practice at a level we already know.`;
+  }
+  const days = daysBetween(last.date, today);
+  if (days >= 2) return `It has been ${days} days since you practised this area, so we’ve brought it back today.`;
+  if (days === 1 && last.difficulty === 'challenging') return 'Your last practice here felt challenging, so we’re staying with your familiar current step.';
+  if (days === 1) return 'You practised this yesterday, so today’s suggestion stays familiar and controlled.';
+  return 'You have already practised this today, so treat this as optional rather than something to complete again.';
+}
+
 function pathwayCandidate(data: HappyBodyData, pathway: Pathway, today: string): Recommendation | null {
   const state = data.movementStates[pathway.id];
   const scoreBase = 20 + goalWeight(data, pathway) + practiceAdjustment(data, pathway.id, today) + bodyAdjustment(data, today);
@@ -101,7 +129,7 @@ function pathwayCandidate(data: HappyBodyData, pathway: Pathway, today: string):
         movementId: pathway.id,
         pathwayId: pathway.id,
         title: `${pathway.name} level is still unknown`,
-        reason: `You chose this goal, but the short check needs equipment you have not listed.`,
+        reason: 'We cannot check this area yet because the short check needs equipment you have not listed.',
         detail: pathway.id === 'pull-up' ? 'Add a secure pull-up bar when available, or choose another area today.' : 'Update your equipment in Settings when it becomes available.',
         minutes: 0,
         score: scoreBase + recommendationRules.unknownMovement,
@@ -114,7 +142,7 @@ function pathwayCandidate(data: HappyBodyData, pathway: Pathway, today: string):
       movementId: pathway.id,
       pathwayId: pathway.id,
       title: `Find your ${pathway.name.toLowerCase()} starting point`,
-      reason: 'Your level is unknown, so a short check is more useful than a guessed exercise.',
+      reason: `We do not know your current ${pathway.name.toLowerCase()} level yet, so a short check will help us suggest something that fits instead of guessing.`,
       detail: `Begin with ${firstCheckpoint.title.toLowerCase()}. You can stop or choose “unsure” at any time.`,
       minutes: 4,
       score: scoreBase + recommendationRules.unknownMovement,
@@ -131,7 +159,7 @@ function pathwayCandidate(data: HappyBodyData, pathway: Pathway, today: string):
       movementId: pathway.id,
       pathwayId: pathway.id,
       title: `${currentLevel.title} needs different equipment`,
-      reason: 'The current step is known, but its equipment is not in your list.',
+      reason: 'We know your current step, but the equipment it needs is not in your list.',
       detail: 'Update Equipment in Settings or open Explore to choose another movement.',
       minutes: 0,
       score: scoreBase + 8,
@@ -149,7 +177,9 @@ function pathwayCandidate(data: HappyBodyData, pathway: Pathway, today: string):
       movementId: pathway.id,
       pathwayId: pathway.id,
       title: `Revisit your ${pathway.name.toLowerCase()} level`,
-      reason: 'Your last check is old enough that a calm reassessment may be more useful than assuming nothing changed.',
+      reason: state.assessedAt
+        ? `Your last check was ${daysBetween(state.assessedAt, today)} days ago, so it may be useful to see what has changed.`
+        : 'Your saved level could use a calm reassessment before we change your next step.',
       detail: `Your saved step remains ${currentLevel.title} until you choose a new outcome.`,
       minutes: 5,
       score: scoreBase + recommendationRules.reassessmentDue,
@@ -163,10 +193,8 @@ function pathwayCandidate(data: HappyBodyData, pathway: Pathway, today: string):
     movementId: pathway.id,
     pathwayId: pathway.id,
     title: item.title,
-    reason: state.status === 'temporarily-limited'
-      ? 'This is your known step, but keep today smaller and easier than usual.'
-      : `This matches your current ${pathway.name.toLowerCase()} step and your recent practice.`,
-    detail: `${item.sets} sets · ${item.reps ?? item.hold} · ${item.durationMinutes} minutes`,
+    reason: practiceReason(data, pathway, today, state.status === 'temporarily-limited'),
+    detail: `${item.sets} sets · ${item.reps ?? item.hold}`,
     minutes: item.durationMinutes,
     score: scoreBase + (state.status === 'temporarily-limited' ? recommendationRules.temporarilyLimited : 0),
     exerciseId: item.id,
@@ -189,7 +217,7 @@ function placeholderCandidate(data: HappyBodyData, goal: GoalId): Recommendation
     movementId: goal,
     pathwayId: null,
     title: `${names[goal] ?? 'This goal'} is on your Body Map`,
-    reason: 'Happy Body remembers this goal, but the verified pathway is not ready yet.',
+    reason: 'We remember this goal, but its verified pathway is not ready yet.',
     detail: 'It will stay visible without made-up levels or exercises. You can choose a developed strength pathway today.',
     minutes: 0,
     score: isPrimary ? 90 : 50,
@@ -197,21 +225,11 @@ function placeholderCandidate(data: HappyBodyData, goal: GoalId): Recommendation
   };
 }
 
-function relevantPathways(data: HappyBodyData) {
-  const chosen = new Set<GoalId>([
-    ...(data.profile.primaryGoal ? [data.profile.primaryGoal] : []),
-    ...data.profile.secondaryGoals,
-    ...data.profile.skillInterests,
-  ]);
-  const matches = pathways.filter((pathway) => pathway.goalIds.some((goal) => chosen.has(goal)));
-  return matches.length ? matches : pathways;
-}
-
 export function getRecommendations(data: HappyBodyData, today = new Date().toISOString().slice(0, 10)): Recommendation[] {
   const checkIn = latestCheckIn(data, today);
   const minutes = checkIn?.minutes ?? data.profile.defaultMinutes;
   const candidates = [
-    ...relevantPathways(data).map((pathway) => pathwayCandidate(data, pathway, today)),
+    ...pathways.map((pathway) => pathwayCandidate(data, pathway, today)),
     ...placeholderGoals.map((goal) => placeholderCandidate(data, goal)),
   ].filter((item): item is Recommendation => Boolean(item));
 

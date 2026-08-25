@@ -2,12 +2,13 @@
 
 import { useMemo, useRef, useState } from 'react';
 import { foundationMapChecks } from '@/data/assessments';
-import { goalById, goalOptions } from '@/data/catalog';
-import { pathwayById, pathways } from '@/data/pathways';
-import { getRecommendations } from '@/lib/recommendations';
+import { equipmentOptions, goalById, goalOptions } from '@/data/catalog';
+import { findExercise, pathwayById, pathways } from '@/data/pathways';
+import { getTodaySessionPlan } from '@/lib/session-plan';
 import { parseImportedData } from '@/lib/storage';
-import type { BodyState, GoalId, HappyBodyData, PathwayId, Recommendation, ScreenId, UserProfile } from '@/lib/types';
+import type { BodyState, EquipmentId, GoalId, HappyBodyData, PathwayId, Recommendation, ScreenId, UserProfile } from '@/lib/types';
 import { formatDate, localDate, MovementStatusPill, PageIntro, PainNote, statusCopy, SteadinessCard } from './shared';
+import { WarmUpDialog } from './warm-up-dialog';
 
 export function TodayScreen({
   data,
@@ -26,55 +27,157 @@ export function TodayScreen({
   const checkIn = data.dailyCheckIns.find((item) => item.date === today);
   const [bodyState, setBodyState] = useState<BodyState>(checkIn?.bodyState ?? 'steady');
   const [minutes, setMinutes] = useState(checkIn?.minutes ?? data.profile.defaultMinutes);
-  const recommendations = useMemo(() => getRecommendations(data, today), [data, today]);
-  const greeting = data.profile.name.trim() ? `${data.profile.name.trim()}, what` : 'What';
+  const [showWarmUp, setShowWarmUp] = useState(false);
+  const session = useMemo(() => getTodaySessionPlan(data, today), [data, today]);
+  const recommendations = session.recommendations;
+  const name = data.profile.name.trim();
+  const availableMinutes = session.availableMinutes;
   const currentMapIds = [...foundationMapChecks.map((check) => check.id), ...pathways.map((pathway) => pathway.id)];
   const assessedCount = currentMapIds.filter((id) => {
     const state = data.movementStates[id];
     return Boolean(state && state.status !== 'unknown');
   }).length;
   const movementWord = assessedCount === 1 ? 'movement' : 'movements';
+  const firstRecommendation = recommendations[0];
+  const allPractice = recommendations.every((item) => item.kind === 'practice');
+  const planCount = recommendations.length;
+  const planCountLabel = `${session.warmUpMinutes ? 'Prepare + ' : ''}${planCount} ${allPractice ? (planCount === 1 ? 'movement' : 'movements') : (planCount === 1 ? 'step' : 'useful steps')}`;
+  const equipment = getPlanEquipment(data, recommendations);
+  const equipmentLabel = formatEquipment(equipment);
+  const timeFitLabel = session.totalMinutes && session.totalMinutes < availableMinutes
+    ? `${session.totalMinutes} min within the ${availableMinutes} min you have`
+    : session.totalMinutes ? `Uses the ${availableMinutes} min you chose` : 'There is no required duration';
 
-  return (
-    <>
-      <section className="today-hero">
-        <div className="today-copy"><p className="eyebrow">TODAY</p><h1>{greeting} would be useful for your body today?</h1><p>Choose a suggestion, check something you do not know yet, or simply rest. Your Body Map guides the options—it does not command your day.</p><div className="hero-actions"><button className="primary-button" onClick={() => openPractice(recommendations.find((item) => item.kind === 'practice') ?? null)}>Begin a useful step →</button><button className="secondary-button" onClick={() => openPractice(null)}>I worked on something else</button></div></div>
-        <div className="body-map-orbit" aria-label={`${assessedCount} ${movementWord} have information in your Body Map`}><span className="orbit-core">{assessedCount}</span><span className="orbit-label">{movementWord}<br />known</span><i className="orbit-a" /><i className="orbit-b" /><i className="orbit-c" /></div>
-      </section>
-
-      <section className="daily-checkin-card">
-        <div><p className="eyebrow">OPTIONAL DAILY CHECK-IN</p><h2>{checkIn ? 'Today’s context is saved.' : 'How are you arriving?'}</h2><p>This changes suggestion size and intensity for today only.</p></div>
-        <div className="checkin-controls"><div><span>Body feels</span><div className="segmented-control">{(['fresh', 'steady', 'stiff', 'tired', 'sore'] as BodyState[]).map((item) => <button key={item} className={bodyState === item ? 'active' : ''} onClick={() => setBodyState(item)}>{item}</button>)}</div></div><div><span>Time today</span><div className="segmented-control time-options">{[5, 10, 20, 30, 45].map((item) => <button key={item} className={minutes === item ? 'active' : ''} onClick={() => setMinutes(item)}>{item}m</button>)}</div></div><button className="soft-button" onClick={() => saveCheckIn(bodyState, minutes)}>{checkIn ? 'Update today' : 'Use this today'}</button></div>
-      </section>
-
-      <section className="section-block recommendations-section">
-        <div className="section-heading"><div><p className="eyebrow">YOUR USEFUL OPTIONS</p><h2>Based on what you have told us</h2></div><button className="text-button" onClick={() => navigate('explore')}>Choose freely in Explore</button></div>
-        <div className="recommendation-grid">{recommendations.map((item, index) => <RecommendationCard key={item.id} item={item} featured={index === 0} openPractice={openPractice} startAssessment={startAssessment} navigate={navigate} />)}</div>
-      </section>
-
-      <section className="today-lower-grid">
-        <div className="quiet-card"><p className="eyebrow">YOUR BODY MAP</p><h2>{assessedCount ? `${assessedCount} ${movementWord} ${assessedCount === 1 ? 'carries' : 'carry'} useful information.` : 'No levels have been assumed.'}</h2><p>{assessedCount ? 'Unknown areas stay unknown until you choose to check them.' : 'Begin with the short foundation check when you are ready.'}</p><button className="secondary-button" onClick={() => navigate('progress')}>Open my Body Map</button></div>
-        <div className="quiet-card recent-card"><p className="eyebrow">RECENT PRACTICE</p><h2>Notice, don’t judge.</h2>{data.practices.length ? data.practices.slice(0, 2).map((entry) => <div className="mini-event" key={entry.id}><span>{entry.completion === 'yes' ? '✓' : '◌'}</span><div><strong>{entry.exerciseTitle}</strong><small>{formatDate(entry.date)} · felt {entry.difficulty}</small></div></div>) : <p>Your first honest practice note will appear here.</p>}<button className="text-button" onClick={() => navigate('diary')}>See my diary →</button></div>
-      </section>
-      <PainNote />
-    </>
-  );
-}
-
-function RecommendationCard({ item, featured, openPractice, startAssessment, navigate }: { item: Recommendation; featured: boolean; openPractice: (item: Recommendation | null) => void; startAssessment: (id?: PathwayId) => void; navigate: (screen: ScreenId) => void }) {
-  const action = () => {
+  const openRecommendation = (item: Recommendation) => {
     if (item.kind === 'practice') openPractice(item);
     else if ((item.kind === 'assess' || item.kind === 'reassess') && item.pathwayId) startAssessment(item.pathwayId);
     else navigate(item.pathwayId ? 'progress' : 'explore');
   };
-  const actionLabel = item.kind === 'practice' ? 'Open practice' : item.kind === 'assess' ? 'Find my level' : item.kind === 'reassess' ? 'Reassess' : item.kind === 'rest' ? 'See other choices' : 'View on my map';
+
+  const saveTodayAndShowPractice = () => {
+    saveCheckIn(bodyState, minutes);
+    window.requestAnimationFrame(() => document.getElementById('today-practice')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  };
+
   return (
-    <article className={`recommendation-card ${featured ? 'featured' : ''} kind-${item.kind}`}>
-      <div className="recommendation-top"><span>{item.kind.replace('-', ' ')}</span>{item.minutes > 0 && <strong>{item.minutes} min</strong>}</div>
-      <h3>{item.title}</h3><p>{item.reason}</p><small>{item.detail}</small>{item.safetyNote && <em>{item.safetyNote}</em>}
-      <button className={featured ? 'primary-button light' : 'secondary-button'} onClick={action}>{actionLabel} →</button>
-    </article>
+    <>
+      <section className="today-checkin-hero" id="daily-check-in">
+        <div className="today-checkin-copy">
+          <p className="eyebrow">TODAY</p>
+          <h1>How does your body feel today?</h1>
+          <p>{name ? `${name}, choose` : 'Choose'} the closest answer. We’ll use it, along with the time you have, to shape today’s practice.</p>
+        </div>
+
+        <div className="today-checkin-panel">
+          <fieldset>
+            <legend>My body feels</legend>
+            <div className="today-feeling-options">{todayBodyOptions.map((item) => <button type="button" key={item.id} aria-pressed={bodyState === item.id} className={bodyState === item.id ? 'selected' : ''} onClick={() => setBodyState(item.id)}><span>{item.symbol}</span><strong>{item.label}</strong></button>)}</div>
+          </fieldset>
+          <fieldset>
+            <legend>Time I have today</legend>
+            <div className="today-time-options">{[5, 10, 20, 30, 45, 60].map((item) => <button type="button" key={item} aria-pressed={minutes === item} className={minutes === item ? 'selected' : ''} onClick={() => setMinutes(item)}>{item} min</button>)}</div>
+          </fieldset>
+          <div className="today-checkin-action"><button className="primary-button" onClick={saveTodayAndShowPractice}>{checkIn ? 'Update today’s practice' : 'Show my practice'} →</button><small>Only today’s suggestions will change.</small></div>
+        </div>
+      </section>
+
+      <section className="today-practice-section" id="today-practice">
+        <div className="today-suggestion-intro">
+          <div><p className="eyebrow">YOUR PRACTICE</p><h2>{firstRecommendation?.kind === 'rest' ? 'A gentler day may be just right.' : 'Here’s what we suggest for today.'}</h2><p>We’ve considered your Body Map, goals, recent practice and today’s check-in.</p></div>
+          <div className="today-plan-facts" aria-label="Today’s practice summary">
+            <span><small>TIME</small><strong>{session.totalMinutes ? `${session.totalMinutes} min` : 'Your choice'}</strong></span>
+            <span><small>PLAN</small><strong>{planCountLabel}</strong></span>
+            <span><small>EQUIPMENT</small><strong>{equipmentLabel}</strong></span>
+          </div>
+        </div>
+
+        <div className="today-plan-card">
+          <div className="today-plan-heading"><div><p className="eyebrow">TODAY’S SESSION</p><h2>{session.totalMinutes ? `A complete ${session.totalMinutes}-minute practice` : 'Choose what feels useful today'}</h2></div><span>{timeFitLabel}</span></div>
+          <div className="today-plan-list">
+            {session.warmUpMinutes > 0 && <article className="today-session-phase phase-prepare"><span className="today-step-number">01</span><div><small>PREPARE · {session.warmUpMinutes} MIN</small><h3>Warm up for today’s movements</h3><p>We’ll begin with gentle whole-body movement, then prepare the joints and muscles you’ll use.</p></div></article>}
+            {session.practiceMinutes > 0 && <div className="today-session-divider"><span>02</span><div><small>PRACTISE · {session.practiceMinutes} MIN</small><strong>{planCountLabel.replace('Prepare + ', '')}</strong></div></div>}
+            {recommendations.map((item, index) => (
+              <article className={`today-plan-step kind-${item.kind}`} key={item.id}>
+                <span className="today-movement-number">{index + 1}</span>
+                <div>
+                  <small>{recommendationKindLabel(item.kind)}{item.minutes ? ` · ${item.minutes} min` : ''}</small>
+                  <h3>{item.title}</h3>
+                  <p>{item.reason}</p>
+                  <span>{item.detail}</span>
+                </div>
+              </article>
+            ))}
+            {session.finishMinutes > 0 && <article className="today-session-phase phase-finish"><span className="today-step-number">03</span><div><small>FINISH · {session.finishMinutes} MIN</small><h3>Let your breathing settle</h3><p>Move easily, slow down, and notice how your body feels before you record the practice.</p></div></article>}
+          </div>
+          <div className="today-plan-actions">
+            {firstRecommendation && <button className="primary-button" onClick={() => session.warmUpMinutes ? setShowWarmUp(true) : openRecommendation(firstRecommendation)}>{session.warmUpMinutes ? 'Begin with your warm-up' : recommendationActionLabel(firstRecommendation.kind)} →</button>}
+            <div className="today-plan-other-actions"><button className="text-button" onClick={() => navigate('explore')}>Choose something different</button><span>·</span><button className="text-button" onClick={() => openPractice(null)}>Record something else</button></div>
+          </div>
+          <p className="today-plan-reassurance">Every practice includes guidance for making the movement easier or knowing when you may be ready for more.</p>
+        </div>
+      </section>
+
+      <section className="today-lower-grid">
+        <div className="quiet-card"><p className="eyebrow">YOUR BODY MAP</p><h2>{assessedCount ? `We know enough to guide ${assessedCount} ${movementWord}.` : 'Your Body Map is ready to begin.'}</h2><p>{assessedCount ? 'Your known levels help us choose useful steps without starting you too easy or asking too much.' : 'A short movement check will help us find your first useful steps.'}</p><button className="secondary-button" onClick={() => navigate('progress')}>See what we know</button></div>
+        <div className="quiet-card recent-card"><p className="eyebrow">RECENT PRACTICE</p><h2>{data.practices.length ? 'Continue from where you left off.' : 'Your practice history starts here.'}</h2>{data.practices.length ? data.practices.slice(0, 2).map((entry) => <div className="mini-event" key={entry.id}><span>{entry.completion === 'yes' ? '✓' : '◌'}</span><div><strong>{entry.exerciseTitle}</strong><small>{formatDate(entry.date)} · felt {entry.difficulty}</small></div></div>) : <p>Once you complete or record a practice, it will appear here for an easy return.</p>}<button className="text-button" onClick={() => navigate('diary')}>Open my diary →</button></div>
+      </section>
+      <PainNote />
+      {showWarmUp && <WarmUpDialog plan={session} close={() => setShowWarmUp(false)} continueSession={(item) => { setShowWarmUp(false); openRecommendation(item); }} />}
+    </>
   );
+}
+
+const todayBodyOptions: Array<{ id: BodyState; label: string; symbol: string }> = [
+  { id: 'fresh', label: 'Fresh', symbol: '↑' },
+  { id: 'steady', label: 'Comfortable', symbol: '○' },
+  { id: 'stiff', label: 'A little stiff', symbol: '↔' },
+  { id: 'tired', label: 'Tired', symbol: '↓' },
+  { id: 'sore', label: 'Sore', symbol: '◇' },
+];
+
+function recommendationKindLabel(kind: Recommendation['kind']) {
+  if (kind === 'practice') return 'Practice';
+  if (kind === 'assess') return 'Find your level';
+  if (kind === 'reassess') return 'Reassessment';
+  if (kind === 'rest') return 'Recovery';
+  return 'Worth noticing';
+}
+
+function recommendationActionLabel(kind: Recommendation['kind']) {
+  if (kind === 'practice') return 'Open';
+  if (kind === 'assess') return 'Begin check';
+  if (kind === 'reassess') return 'Reassess';
+  if (kind === 'rest') return 'Choose freely';
+  return 'View details';
+}
+
+function getPlanEquipment(data: HappyBodyData, recommendations: Recommendation[]): EquipmentId[] {
+  const equipment = new Set<EquipmentId>();
+  const available = new Set(data.profile.equipment);
+  recommendations.forEach((item) => {
+    if (item.exerciseId) {
+      findExercise(item.exerciseId)?.exercise.equipment.forEach((equipmentId) => equipment.add(equipmentId));
+      return;
+    }
+    if (!item.pathwayId || (item.kind !== 'assess' && item.kind !== 'reassess')) return;
+    const pathway = pathwayById[item.pathwayId];
+    const currentLevel = data.movementStates[item.pathwayId]?.currentLevel;
+    const availableChecks = pathway.assessment.filter((check) => check.equipment.every((equipmentId) => equipmentId === 'none' || available.has(equipmentId)));
+    const check = item.kind === 'reassess' && currentLevel !== null && currentLevel !== undefined
+      ? [...availableChecks].sort((a, b) => Math.abs(a.levelIndex - currentLevel) - Math.abs(b.levelIndex - currentLevel))[0]
+      : availableChecks[0];
+    check?.equipment.forEach((equipmentId) => equipment.add(equipmentId));
+  });
+  return [...equipment].filter((equipmentId) => equipmentId !== 'none');
+}
+
+function formatEquipment(equipment: EquipmentId[]) {
+  if (!equipment.length) return 'None needed';
+  const labelById = Object.fromEntries(equipmentOptions.map((item) => [item.id, item.label])) as Record<EquipmentId, string>;
+  const labels = equipment.map((equipmentId) => labelById[equipmentId]);
+  if (labels.length === 1) return labels[0];
+  if (labels.length === 2) return `${labels[0]} + ${labels[1]}`;
+  return `${labels.slice(0, -1).join(', ')} + ${labels.at(-1)}`;
 }
 
 export function ProgressScreen({ data, startAssessment }: { data: HappyBodyData; startAssessment: (pathwayId?: PathwayId) => void }) {

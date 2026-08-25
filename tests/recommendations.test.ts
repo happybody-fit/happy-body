@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { getRecommendations } from '@/lib/recommendations';
+import { getTodaySessionPlan } from '@/lib/session-plan';
 import { createDefaultData, migrateLegacyProgress } from '@/lib/storage';
 import type { LegacyUserProgress } from '@/lib/types';
 
@@ -61,6 +62,75 @@ test('available time limits the number of suggestions', () => {
   assert.equal(getRecommendations(data, '2026-08-24').length, 1);
   data.profile.defaultMinutes = 30;
   assert.equal(getRecommendations(data, '2026-08-24').length, 3);
+});
+
+test('a 30-minute workout includes preparation, practice and a finish within the chosen time', () => {
+  const data = readyData();
+  data.profile.defaultMinutes = 30;
+  (['squat', 'push-up', 'pull-up'] as const).forEach((pathwayId) => {
+    data.movementStates[pathwayId] = { movementId: pathwayId, status: 'in-progress', outcome: 'comfortable', currentLevel: 1, assessedAt: '2026-08-24', reassessAfter: '2026-09-24', note: '' };
+  });
+
+  const session = getTodaySessionPlan(data, '2026-08-24');
+  assert.equal(session.availableMinutes, 30);
+  assert.equal(session.totalMinutes, 30);
+  assert.equal(session.warmUpMinutes, 5);
+  assert.equal(session.practiceMinutes, 22);
+  assert.equal(session.finishMinutes, 3);
+  assert.equal(session.recommendations.reduce((total, item) => total + item.minutes, 0), 22);
+  assert.equal(session.warmUpSteps.reduce((total, item) => total + item.minutes, 0), 5);
+});
+
+test('known movement sessions use every selected time option without inflating a practice block excessively', () => {
+  const data = readyData();
+  (['squat', 'push-up', 'pull-up'] as const).forEach((pathwayId) => {
+    data.movementStates[pathwayId] = { movementId: pathwayId, status: 'in-progress', outcome: 'comfortable', currentLevel: 1, assessedAt: '2026-08-24', reassessAfter: '2026-09-24', note: '' };
+  });
+
+  [5, 10, 20, 30, 45, 60].forEach((minutes) => {
+    data.profile.defaultMinutes = minutes;
+    const session = getTodaySessionPlan(data, '2026-08-24');
+    assert.equal(session.totalMinutes, minutes);
+    assert.equal(session.recommendations.reduce((total, item) => total + item.minutes, 0), session.practiceMinutes);
+    assert.ok(session.recommendations.every((item) => item.kind !== 'practice' || item.minutes <= 18));
+  });
+});
+
+test('a 60-minute session gives the three known movements 47 purposeful minutes', () => {
+  const data = readyData();
+  data.profile.defaultMinutes = 60;
+  (['squat', 'push-up', 'pull-up'] as const).forEach((pathwayId) => {
+    data.movementStates[pathwayId] = { movementId: pathwayId, status: 'in-progress', outcome: 'comfortable', currentLevel: 1, assessedAt: '2026-08-24', reassessAfter: '2026-09-24', note: '' };
+  });
+
+  const session = getTodaySessionPlan(data, '2026-08-24');
+  assert.equal(session.warmUpMinutes, 8);
+  assert.equal(session.practiceMinutes, 47);
+  assert.equal(session.finishMinutes, 5);
+  assert.equal(session.totalMinutes, 60);
+  assert.ok(session.recommendations.every((item) => /full rest included/i.test(item.detail)));
+});
+
+test('warm-up preparation reflects the movements in the session', () => {
+  const data = readyData();
+  data.profile.primaryGoal = 'push-up';
+  data.profile.defaultMinutes = 20;
+  data.movementStates.squat = { movementId: 'squat', status: 'in-progress', outcome: 'comfortable', currentLevel: 1, assessedAt: '2026-08-24', reassessAfter: '2026-09-24', note: '' };
+  data.movementStates['push-up'] = { movementId: 'push-up', status: 'in-progress', outcome: 'comfortable', currentLevel: 1, assessedAt: '2026-08-24', reassessAfter: '2026-09-24', note: '' };
+
+  const session = getTodaySessionPlan(data, '2026-08-24');
+  const activePathways = session.recommendations.filter((item) => item.minutes > 0 && item.pathwayId).map((item) => item.pathwayId);
+  activePathways.forEach((pathwayId) => assert.ok(session.warmUpSteps.some((step) => step.id === `prepare-${pathwayId}`)));
+  assert.ok(session.totalMinutes <= session.availableMinutes);
+});
+
+test('a broad comfort goal still produces a whole-body set of useful steps', () => {
+  const data = readyData();
+  data.profile.primaryGoal = 'move-comfortably';
+  data.profile.defaultMinutes = 30;
+  const recommendations = getRecommendations(data, '2026-08-24');
+  assert.equal(recommendations.length, 3);
+  assert.equal(new Set(recommendations.map((item) => item.pathwayId)).size, 3);
 });
 
 test('undeveloped goals remain visible without invented exercises', () => {

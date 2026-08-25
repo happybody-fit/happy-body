@@ -217,6 +217,23 @@ export interface Recommendation {
   safetyNote?: string;
 }
 
+export interface WarmUpStep {
+  id: string;
+  title: string;
+  instruction: string;
+  minutes: number;
+}
+
+export interface TodaySessionPlan {
+  availableMinutes: number;
+  totalMinutes: number;
+  warmUpMinutes: number;
+  practiceMinutes: number;
+  finishMinutes: number;
+  recommendations: Recommendation[];
+  warmUpSteps: WarmUpStep[];
+}
+
 // Retained only for safe local and cloud migration from the original prototype.
 export interface LegacyUserProgress {
   selectedGoals: PathwayId[];
