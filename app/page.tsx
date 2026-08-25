@@ -18,6 +18,7 @@ export default function Home() {
   const [data, setData] = useState<HappyBodyData>(() => createDefaultData());
   const [ready, setReady] = useState(false);
   const [screen, setScreen] = useState<ScreenId>('today');
+  const [explorePathwayId, setExplorePathwayId] = useState<PathwayId>('squat');
   const [assessment, setAssessment] = useState<AssessmentView>(null);
   const [practice, setPractice] = useState<Recommendation | null | undefined>(undefined);
   const [showAccount, setShowAccount] = useState(false);
@@ -50,13 +51,21 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: 'auto' });
   };
 
+  const openPathway = (pathwayId: PathwayId) => {
+    setExplorePathwayId(pathwayId);
+    navigate('explore');
+  };
+
   const completeOnboarding = (profile: UserProfile, takeAssessment: boolean) => {
     setData((current) => ({ ...current, profile, updatedAt: new Date().toISOString() }));
     if (takeAssessment) setAssessment({ mode: 'initial' });
     else { setScreen('today'); setToast('Your Body Map is ready whenever you want to begin.'); }
   };
 
-  const startAssessment = (pathwayId?: PathwayId) => setAssessment(pathwayId ? { mode: 'pathway', pathwayId } : { mode: 'initial' });
+  const startAssessment = (pathwayId?: PathwayId) => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    setAssessment(pathwayId ? { mode: 'pathway', pathwayId } : { mode: 'initial' });
+  };
 
   const saveAssessmentResult: React.ComponentProps<typeof AssessmentFlow>['onResult'] = ({ state, record, painBodyArea }) => {
     setData((current) => {
@@ -126,8 +135,8 @@ export default function Home() {
       <Header screen={screen} data={data} sync={sync} navigate={navigate} openAccount={() => setShowAccount(true)} />
       <div className="app-page">
         {screen === 'today' && <TodayScreen data={data} navigate={navigate} saveCheckIn={saveCheckIn} openPractice={setPractice} startAssessment={startAssessment} />}
-        {screen === 'progress' && <ProgressScreen data={data} startAssessment={startAssessment} />}
-        {screen === 'explore' && <ExploreScreen data={data} updateProfile={updateProfile} startAssessment={startAssessment} openPractice={setPractice} />}
+        {screen === 'progress' && <ProgressScreen data={data} startAssessment={startAssessment} openPathway={openPathway} />}
+        {screen === 'explore' && <ExploreScreen data={data} initialPathwayId={explorePathwayId} updateProfile={updateProfile} startAssessment={startAssessment} openPractice={setPractice} />}
         {screen === 'diary' && <DiaryScreen data={data} openPractice={setPractice} />}
         {screen === 'settings' && <SettingsScreen data={data} updateProfile={updateProfile} repeatOnboarding={() => updateProfile({ ...data.profile, onboardingCompleted: false })} repeatAssessment={() => startAssessment()} openAccount={() => setShowAccount(true)} importData={(next) => { setData(next); setScreen(next.preferences.lastScreen); }} resetData={resetData} />}
       </div>

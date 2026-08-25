@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { pathways } from '@/data/pathways';
-import { createDefaultData, migrateLegacyProgress } from '@/lib/storage';
-import type { AssessmentRecord, HappyBodyData, LegacyUserProgress, PathwayId, PracticeEntry } from '@/lib/types';
+import { createDefaultData, migrateLegacyProgress, normalizeHappyBodyData } from '@/lib/storage';
+import type { AssessmentRecord, HappyBodyData, LegacyPathwayId, LegacyUserProgress, PathwayId, PracticeEntry } from '@/lib/types';
 
 type CloudError = { code?: string; message: string } | null;
 
@@ -58,13 +58,14 @@ async function loadLegacyCloudProgress(client: SupabaseClient, userId: string): 
   const milestoneRows = milestoneResult.data ?? [];
   if (!pathwaysData.length && !practices.length && !assessments.length && !milestoneRows.length) return null;
 
+  const isLegacyPathwayId = (value: unknown): value is LegacyPathwayId => value === 'squat' || value === 'push-up' || value === 'pull-up';
   const legacy: LegacyUserProgress = {
-    selectedGoals: pathwaysData.filter((row) => row.selected).map((row) => row.pathway_id as PathwayId),
+    selectedGoals: pathwaysData.filter((row) => row.selected && isLegacyPathwayId(row.pathway_id)).map((row) => row.pathway_id as LegacyPathwayId),
     currentLevels: { squat: 0, 'push-up': 0, 'pull-up': 0 },
-    practices: practices.map((row) => ({
+    practices: practices.filter((row) => isLegacyPathwayId(row.pathway_id)).map((row) => ({
       id: row.id as string,
       date: row.date as string,
-      pathwayId: row.pathway_id as PathwayId,
+      pathwayId: row.pathway_id as LegacyPathwayId,
       exerciseId: row.exercise_id as string,
       exerciseTitle: row.exercise_title as string,
       sets: row.sets as number | null,
@@ -76,22 +77,22 @@ async function loadLegacyCloudProgress(client: SupabaseClient, userId: string): 
       notes: row.notes as string,
       videoUrl: row.video_url as string,
     })),
-    assessments: assessments.map((row) => ({
+    assessments: assessments.filter((row) => isLegacyPathwayId(row.pathway_id)).map((row) => ({
       id: row.id as string,
       date: row.date as string,
-      pathwayId: row.pathway_id as PathwayId,
+      pathwayId: row.pathway_id as LegacyPathwayId,
       levelIndex: row.level_index as number,
       levelTitle: row.level_title as string,
     })),
     milestones: milestoneRows.map((row) => row.title as string),
   };
-  pathwaysData.forEach((row) => { legacy.currentLevels[row.pathway_id as PathwayId] = row.current_level as number; });
+  pathwaysData.forEach((row) => { if (isLegacyPathwayId(row.pathway_id)) legacy.currentLevels[row.pathway_id] = row.current_level as number; });
   return migrateLegacyProgress(legacy);
 }
 
 export async function loadCloudProgress(client: SupabaseClient, userId: string): Promise<HappyBodyData | null> {
   const stateResult = await client.from('happy_body_state').select('data').eq('user_id', userId).maybeSingle();
-  if (!stateResult.error && stateResult.data?.data) return stateResult.data.data as HappyBodyData;
+  if (!stateResult.error && stateResult.data?.data) return normalizeHappyBodyData(stateResult.data.data as Partial<HappyBodyData>);
   if (stateResult.error && !isMissingStateTable(stateResult.error)) throw new Error(stateResult.error.message);
   return loadLegacyCloudProgress(client, userId);
 }

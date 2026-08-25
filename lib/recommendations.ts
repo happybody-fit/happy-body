@@ -3,6 +3,7 @@ import type { DailyCheckIn, GoalId, HappyBodyData, Pathway, PathwayId, Recommend
 
 export const recommendationRules = {
   primaryGoal: 35,
+  exactPrimaryPathway: 16,
   secondaryGoal: 18,
   skillInterest: 10,
   unknownMovement: 22,
@@ -18,7 +19,7 @@ export const recommendationRules = {
   soreBody: -22,
 } as const;
 
-const placeholderGoals: GoalId[] = ['front-split', 'middle-split', 'handstand', 'improve-mobility'];
+const placeholderGoals: GoalId[] = ['handstand-walk'];
 
 function dayNumber(date: string) {
   return Math.floor(new Date(`${date.slice(0, 10)}T12:00:00Z`).getTime() / 86_400_000);
@@ -32,6 +33,7 @@ function goalWeight(data: HappyBodyData, pathway: Pathway) {
   const relevantGoals = new Set(pathway.goalIds);
   let score = 0;
   if (data.profile.primaryGoal && relevantGoals.has(data.profile.primaryGoal)) score += recommendationRules.primaryGoal;
+  if (data.profile.primaryGoal === pathway.primaryGoal) score += recommendationRules.exactPrimaryPathway;
   data.profile.secondaryGoals.forEach((goal) => {
     if (relevantGoals.has(goal)) score += recommendationRules.secondaryGoal;
   });
@@ -82,15 +84,10 @@ function practiceReason(data: HappyBodyData, pathway: Pathway, today: string, te
     ...data.profile.skillInterests,
   ];
   const supportsChosenGoal = chosenGoals.some((goal) => pathway.goalIds.includes(goal));
-  const wholeBodyFocus: Record<PathwayId, string> = {
-    squat: 'lower-body strength',
-    'push-up': 'pushing strength',
-    'pull-up': 'pulling strength',
-  };
   if (!last) {
     return supportsChosenGoal
       ? `This supports a goal you chose through the ${pathway.name.toLowerCase()} step we already know.`
-      : `This keeps ${wholeBodyFocus[pathway.id]} in your whole-body practice at a level we already know.`;
+      : `This keeps ${pathway.focusLabel} in your whole-body practice at a level we already know.`;
   }
   const days = daysBetween(last.date, today);
   if (days >= 2) return `It has been ${days} days since you practised this area, so we’ve brought it back today.`;
@@ -121,8 +118,8 @@ function pathwayCandidate(data: HappyBodyData, pathway: Pathway, today: string):
   }
 
   if (!state || state.status === 'unknown' || state.currentLevel === null) {
-    const firstCheckpoint = pathway.assessment.find((item) => hasEquipment(data, item.equipment));
-    if (!firstCheckpoint) {
+    const firstCheckpoint = pathway.assessment[0];
+    if (!firstCheckpoint || !hasEquipment(data, firstCheckpoint.equipment)) {
       return {
         id: `equipment-${pathway.id}`,
         kind: 'attention',
@@ -206,10 +203,8 @@ function placeholderCandidate(data: HappyBodyData, goal: GoalId): Recommendation
   const isSecondary = data.profile.secondaryGoals.includes(goal) || data.profile.skillInterests.includes(goal);
   if (!isPrimary && !isSecondary) return null;
   const names: Partial<Record<GoalId, string>> = {
-    'front-split': 'Front split',
-    'middle-split': 'Middle split',
     handstand: 'Handstand',
-    'improve-mobility': 'Mobility',
+    'handstand-walk': 'Handstand walking',
   };
   return {
     id: `placeholder-${goal}`,
@@ -218,11 +213,44 @@ function placeholderCandidate(data: HappyBodyData, goal: GoalId): Recommendation
     pathwayId: null,
     title: `${names[goal] ?? 'This goal'} is on your Body Map`,
     reason: 'We remember this goal, but its verified pathway is not ready yet.',
-    detail: 'It will stay visible without made-up levels or exercises. You can choose a developed strength pathway today.',
+    detail: 'It will stay visible without made-up levels or exercises while its dedicated pathway is developed.',
     minutes: 0,
     score: isPrimary ? 90 : 50,
     exerciseId: null,
   };
+}
+
+function recommendationCount(minutes: number) {
+  if (minutes < 15) return 1;
+  if (minutes < 30) return 2;
+  if (minutes < 45) return 3;
+  if (minutes < 60) return 4;
+  return 6;
+}
+
+function selectBalancedPractice(candidates: Recommendation[], count: number) {
+  const remaining = [...candidates];
+  const selected: Recommendation[] = [];
+  const categories = new Set<Pathway['category']>();
+  const focuses = new Set<Pathway['focus']>();
+
+  while (selected.length < count && remaining.length) {
+    remaining.sort((a, b) => {
+      const pathA = a.pathwayId ? pathwayById[a.pathwayId] : null;
+      const pathB = b.pathwayId ? pathwayById[b.pathwayId] : null;
+      const adjustedA = a.score + (pathA && !categories.has(pathA.category) ? 12 : 0) + (pathA && !focuses.has(pathA.focus) ? 7 : 0);
+      const adjustedB = b.score + (pathB && !categories.has(pathB.category) ? 12 : 0) + (pathB && !focuses.has(pathB.focus) ? 7 : 0);
+      return adjustedB - adjustedA;
+    });
+    const next = remaining.shift()!;
+    selected.push(next);
+    if (next.pathwayId) {
+      categories.add(pathwayById[next.pathwayId].category);
+      focuses.add(pathwayById[next.pathwayId].focus);
+    }
+  }
+
+  return selected;
 }
 
 export function getRecommendations(data: HappyBodyData, today = new Date().toISOString().slice(0, 10)): Recommendation[] {
@@ -248,8 +276,20 @@ export function getRecommendations(data: HappyBodyData, today = new Date().toISO
     });
   }
 
-  const count = minutes < 15 ? 1 : minutes < 30 ? 2 : 3;
-  const selected = candidates.sort((a, b) => b.score - a.score).slice(0, count);
+  const count = recommendationCount(minutes);
+  const rest = candidates.find((item) => item.kind === 'rest');
+  const practiceCandidates = candidates.filter((item) => item.kind === 'practice');
+  const selected = rest
+    ? [rest, ...selectBalancedPractice(practiceCandidates, count - 1)]
+    : selectBalancedPractice(practiceCandidates, count);
+  if (selected.length < count) {
+    const chosen = new Set(selected.map((item) => item.id));
+    candidates
+      .filter((item) => !chosen.has(item.id))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, count - selected.length)
+      .forEach((item) => selected.push(item));
+  }
   const activeCount = Math.max(1, selected.filter((item) => item.minutes > 0).length);
   const allowance = Math.max(4, Math.floor(minutes / activeCount));
   return selected.map((item) => ({

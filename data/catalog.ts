@@ -106,4 +106,5 @@ export const equipmentOptions: Array<{ id: EquipmentId; label: string }> = [
   { id: 'resistance-band', label: 'Resistance band' },
   { id: 'pull-up-bar', label: 'Pull-up bar' },
   { id: 'rings', label: 'Gymnastic rings' },
+  { id: 'secure-anchor', label: 'Secure foot anchor or training partner' },
 ];

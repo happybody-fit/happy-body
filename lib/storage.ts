@@ -1,10 +1,12 @@
-import type { GoalId, HappyBodyData, LegacyUserProgress, MovementState, PathwayId } from './types';
+import { pathways } from '@/data/pathways';
+import type { GoalId, HappyBodyData, LegacyPathwayId, LegacyUserProgress, MovementState, PathwayId } from './types';
 import { foundationStateIds } from '@/data/assessments';
 
 export const STORAGE_KEY = 'happy-body-data-v2';
 export const LEGACY_STORAGE_KEY = 'happy-body-progress-v1';
 
-const pathwayIds: PathwayId[] = ['squat', 'push-up', 'pull-up'];
+const pathwayIds: PathwayId[] = pathways.map((pathway) => pathway.id);
+const legacyPathwayIds: LegacyPathwayId[] = ['squat', 'push-up', 'pull-up'];
 
 function unknownState(movementId: string): MovementState {
   return {
@@ -63,13 +65,13 @@ const legacyDefault: LegacyUserProgress = {
   milestones: [],
 };
 
-const legacyLevelMap: Record<PathwayId, number[]> = {
+const legacyLevelMap: Record<LegacyPathwayId, number[]> = {
   squat: [0, 3, 5, 8],
   'push-up': [0, 1, 5, 8],
   'pull-up': [0, 2, 4, 6],
 };
 
-const pathwayGoalMap: Record<PathwayId, GoalId> = {
+const pathwayGoalMap: Record<LegacyPathwayId, GoalId> = {
   squat: 'pistol-squat',
   'push-up': 'push-up',
   'pull-up': 'pull-up',
@@ -83,12 +85,12 @@ export function migrateLegacyProgress(legacy: LegacyUserProgress, now = new Date
   const migrated = createDefaultData(now);
   if (!hasMeaningfulLegacyData(legacy)) return migrated;
 
-  const lastAssessmentByPathway = new Map<PathwayId, LegacyUserProgress['assessments'][number]>();
+  const lastAssessmentByPathway = new Map<LegacyPathwayId, LegacyUserProgress['assessments'][number]>();
   [...legacy.assessments]
     .sort((a, b) => a.date.localeCompare(b.date))
     .forEach((record) => lastAssessmentByPathway.set(record.pathwayId, record));
 
-  pathwayIds.forEach((pathwayId) => {
+  legacyPathwayIds.forEach((pathwayId) => {
     const assessed = lastAssessmentByPathway.get(pathwayId);
     const hasPractice = legacy.practices.some((entry) => entry.pathwayId === pathwayId);
     if (!assessed && !hasPractice) return;
@@ -146,11 +148,27 @@ export function migrateLegacyProgress(legacy: LegacyUserProgress, now = new Date
   return migrated;
 }
 
-function normalizeData(value: Partial<HappyBodyData>): HappyBodyData {
+export function normalizeHappyBodyData(value: Partial<HappyBodyData>): HappyBodyData {
   const fallback = createDefaultData();
   const states = { ...fallback.movementStates };
   Object.entries(value.movementStates ?? {}).forEach(([id, state]) => {
     states[id] = { ...unknownState(id), ...state, movementId: id };
+  });
+
+  const promotedFoundationStates: Array<{ source: string; target: PathwayId; levels: number[] }> = [
+    { source: 'hip-extension', target: 'hip-hinge', levels: [0, 1, 2] },
+    { source: 'core-control', target: 'core', levels: [0, 1, 2, 3] },
+    { source: 'pike-forward-fold', target: 'pike', levels: [1, 2, 3] },
+  ];
+  promotedFoundationStates.forEach(({ source, target, levels }) => {
+    const previous = states[source];
+    if (!previous || previous.currentLevel === null || states[target]?.currentLevel !== null) return;
+    states[target] = {
+      ...previous,
+      movementId: target,
+      currentLevel: levels[Math.min(previous.currentLevel, levels.length - 1)],
+      note: previous.note || 'Carried forward from your original foundation movement check.',
+    };
   });
 
   return {
@@ -173,7 +191,7 @@ export function parseImportedData(raw: string) {
   if (parsed.version !== 2 || typeof parsed.profile !== 'object' || !parsed.profile) {
     throw new Error('This file is not a Happy Body version 2 export.');
   }
-  return normalizeData(parsed);
+  return normalizeHappyBodyData(parsed);
 }
 
 export interface ProgressRepository {
@@ -187,7 +205,7 @@ export const browserProgressRepository: ProgressRepository = {
     if (typeof window === 'undefined') return createDefaultData();
     try {
       const current = window.localStorage.getItem(STORAGE_KEY);
-      if (current) return normalizeData(JSON.parse(current) as Partial<HappyBodyData>);
+      if (current) return normalizeHappyBodyData(JSON.parse(current) as Partial<HappyBodyData>);
 
       const legacy = window.localStorage.getItem(LEGACY_STORAGE_KEY);
       if (legacy) {
@@ -214,5 +232,5 @@ export const browserProgressRepository: ProgressRepository = {
 };
 
 export function isPathwayId(value: string): value is PathwayId {
-  return value === 'squat' || value === 'push-up' || value === 'pull-up';
+  return pathwayIds.includes(value as PathwayId);
 }

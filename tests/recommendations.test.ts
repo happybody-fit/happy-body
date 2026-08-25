@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { getRecommendations } from '@/lib/recommendations';
 import { getTodaySessionPlan } from '@/lib/session-plan';
-import { createDefaultData, migrateLegacyProgress } from '@/lib/storage';
-import type { LegacyUserProgress } from '@/lib/types';
+import { createDefaultData, migrateLegacyProgress, parseImportedData } from '@/lib/storage';
+import { pathways } from '@/data/pathways';
+import type { LegacyUserProgress, PathwayId } from '@/lib/types';
 
 function readyData() {
   const data = createDefaultData('2026-08-24T08:00:00.000Z');
@@ -96,10 +97,10 @@ test('known movement sessions use every selected time option without inflating a
   });
 });
 
-test('a 60-minute session gives the three known movements 47 purposeful minutes', () => {
+test('a 60-minute session uses six known pathways across strength and mobility', () => {
   const data = readyData();
   data.profile.defaultMinutes = 60;
-  (['squat', 'push-up', 'pull-up'] as const).forEach((pathwayId) => {
+  (['squat', 'hip-hinge', 'core', 'push-up', 'pike', 'rotation'] as const).forEach((pathwayId) => {
     data.movementStates[pathwayId] = { movementId: pathwayId, status: 'in-progress', outcome: 'comfortable', currentLevel: 1, assessedAt: '2026-08-24', reassessAfter: '2026-09-24', note: '' };
   });
 
@@ -108,7 +109,11 @@ test('a 60-minute session gives the three known movements 47 purposeful minutes'
   assert.equal(session.practiceMinutes, 47);
   assert.equal(session.finishMinutes, 5);
   assert.equal(session.totalMinutes, 60);
-  assert.ok(session.recommendations.every((item) => /full rest included/i.test(item.detail)));
+  assert.equal(session.recommendations.length, 6);
+  assert.ok(session.recommendations.every((item) => item.kind === 'practice'));
+  const categories = new Set(session.recommendations.map((item) => pathways.find((pathway) => pathway.id === item.pathwayId)?.category));
+  assert.deepEqual(categories, new Set(['Strength', 'Mobility']));
+  assert.equal(session.recommendations.reduce((total, item) => total + item.minutes, 0), 47);
 });
 
 test('warm-up preparation reflects the movements in the session', () => {
@@ -133,13 +138,83 @@ test('a broad comfort goal still produces a whole-body set of useful steps', () 
   assert.equal(new Set(recommendations.map((item) => item.pathwayId)).size, 3);
 });
 
-test('undeveloped goals remain visible without invented exercises', () => {
+test('newly added goals begin with an honest level check, not a guessed exercise', () => {
   const data = readyData();
   data.profile.primaryGoal = 'front-split';
   const recommendation = getRecommendations(data, '2026-08-24')[0];
   assert.equal(recommendation.movementId, 'front-split');
+  assert.equal(recommendation.kind, 'assess');
+  assert.equal(recommendation.exerciseId, null);
+});
+
+test('the whole-body map contains eight strength and eight mobility pathways', () => {
+  assert.equal(pathways.length, 16);
+  assert.equal(pathways.filter((pathway) => pathway.category === 'Strength').length, 8);
+  assert.equal(pathways.filter((pathway) => pathway.category === 'Mobility').length, 8);
+  assert.equal(new Set(pathways.map((pathway) => pathway.id)).size, 16);
+  pathways.forEach((pathway) => {
+    assert.ok(pathway.levels.length >= 5, `${pathway.name} should have a useful first-pass ladder`);
+    assert.ok(pathway.assessment.length >= 3, `${pathway.name} should have starting-level checks`);
+    assert.ok(pathway.levels.every((level) => level.exercises.length > 0));
+    const exerciseIds = pathway.levels.flatMap((level) => level.exercises.map((exercise) => exercise.id));
+    assert.equal(new Set(exerciseIds).size, exerciseIds.length, `${pathway.name} exercise ids should be unique`);
+    pathway.levels.flatMap((level) => level.exercises).forEach((exercise) => {
+      exercise.alternatives.forEach((alternative) => assert.ok(exerciseIds.includes(alternative), `${exercise.title} should reference a real alternative`));
+    });
+  });
+});
+
+test('new data begins without inventing a current level for any pathway', () => {
+  const data = createDefaultData('2026-08-24T08:00:00.000Z');
+  assert.ok(pathways.every((pathway) => pathway.id in data.movementStates));
+  pathways.forEach((pathway) => {
+    assert.equal(data.movementStates[pathway.id].currentLevel, null);
+    assert.equal(data.movementStates[pathway.id].status, 'unknown');
+  });
+});
+
+test('every pathway can generate a safe assessment invitation when its level is unknown', () => {
+  pathways.forEach((pathway) => {
+    const data = readyData();
+    data.profile.primaryGoal = pathway.primaryGoal;
+    data.profile.defaultMinutes = 5;
+    const recommendation = getRecommendations(data, '2026-08-24')[0];
+    assert.equal(recommendation.pathwayId, pathway.id);
+    assert.ok(['assess', 'attention'].includes(recommendation.kind));
+    assert.equal(recommendation.exerciseId, null);
+  });
+});
+
+test('an unavailable starting setup never skips straight to a harder checkpoint', () => {
+  const data = readyData();
+  data.profile.primaryGoal = 'resting-squat';
+  data.profile.equipment = ['none'];
+  data.profile.defaultMinutes = 5;
+  const recommendation = getRecommendations(data, '2026-08-24')[0];
+  assert.equal(recommendation.pathwayId, 'resting-squat');
   assert.equal(recommendation.kind, 'attention');
   assert.equal(recommendation.exerciseId, null);
+});
+
+test('existing foundation results carry into their newly completed pathways', () => {
+  const previous = createDefaultData('2026-08-24T08:00:00.000Z');
+  previous.movementStates['hip-extension'] = { movementId: 'hip-extension', status: 'assessed', outcome: 'comfortable', currentLevel: 1, assessedAt: '2026-08-24', reassessAfter: '2026-09-24', note: '' };
+  previous.movementStates['core-control'] = { movementId: 'core-control', status: 'assessed', outcome: 'comfortable', currentLevel: 2, assessedAt: '2026-08-24', reassessAfter: '2026-09-24', note: '' };
+  previous.movementStates['pike-forward-fold'] = { movementId: 'pike-forward-fold', status: 'assessed', outcome: 'comfortable', currentLevel: 1, assessedAt: '2026-08-24', reassessAfter: '2026-09-24', note: '' };
+
+  const normalized = parseImportedData(JSON.stringify(previous));
+  assert.equal(normalized.movementStates['hip-hinge'].currentLevel, 1);
+  assert.equal(normalized.movementStates.core.currentLevel, 2);
+  assert.equal(normalized.movementStates.pike.currentLevel, 2);
+});
+
+test('a known state can be represented for all sixteen pathway ids', () => {
+  const data = readyData();
+  pathways.forEach((pathway) => {
+    const pathwayId: PathwayId = pathway.id;
+    data.movementStates[pathwayId] = { movementId: pathwayId, status: 'in-progress', outcome: 'comfortable', currentLevel: 0, assessedAt: '2026-08-24', reassessAfter: '2026-09-24', note: '' };
+  });
+  assert.equal(Object.values(data.movementStates).filter((state) => state.currentLevel === 0).length, 16);
 });
 
 test('the untouched legacy prototype defaults migrate to a fresh honest Body Map', () => {

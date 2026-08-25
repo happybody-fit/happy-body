@@ -1,7 +1,8 @@
 import { getRecommendations } from './recommendations';
+import { pathwayById } from '@/data/pathways';
 import type { BodyState, HappyBodyData, PathwayId, Recommendation, TodaySessionPlan, WarmUpStep } from './types';
 
-const pathwayPreparation: Record<PathwayId, { title: string; instruction: string }> = {
+const pathwayPreparation: Partial<Record<PathwayId, { title: string; instruction: string }>> = {
   squat: {
     title: 'Prepare your ankles, knees and hips',
     instruction: 'Try comfortable ankle rocks, gentle hip shifts and a few easy supported or bodyweight squats.',
@@ -14,7 +15,27 @@ const pathwayPreparation: Record<PathwayId, { title: string; instruction: string
     title: 'Prepare your shoulders and grip',
     instruction: 'Use shoulder circles and easy shoulder-blade movement, then try a feet-supported hold or a very light hang if you have a secure bar.',
   },
+  'knee-flexion': { title: 'Prepare your knees and hamstrings', instruction: 'Begin with gentle heel digs, easy bridges and a few small knee bends without creating fatigue.' },
+  'hip-hinge': { title: 'Prepare your hips and hamstrings', instruction: 'Try easy bridges and a few small hip hinges, gradually finding the range you will use.' },
+  core: { title: 'Prepare your trunk and breathing', instruction: 'Use slow breaths, gentle pelvic movement and a few easy alternating core marches.' },
+  'vertical-push': { title: 'Prepare your wrists and overhead reach', instruction: 'Move the wrists and shoulders gently, then rehearse a supported pike position with less weight in the hands.' },
+  'horizontal-pull': { title: 'Prepare your shoulders and elbows', instruction: 'Use shoulder circles and easy shoulder-blade movement, then rehearse a very light supported pull.' },
+  'resting-squat': { title: 'Prepare your ankles and hips', instruction: 'Use ankle rocks, hip shifts and a few supported squats before staying lower.' },
+  pike: { title: 'Prepare for folding', instruction: 'Walk or march first, then use gentle hip hinges and easy alternating leg reaches without pulling into range.' },
+  pancake: { title: 'Prepare your inner thighs and hips', instruction: 'Use comfortable wide-stance shifts and small straddle movements before folding forward.' },
+  'front-split': { title: 'Prepare both sides of your hips', instruction: 'Use easy lunges and gentle front-leg reaches on both sides before exploring a longer stance.' },
+  'middle-split': { title: 'Prepare for side-to-side range', instruction: 'Use comfortable wide squats, side shifts and small frog rocks without sliding deeper.' },
+  bridge: { title: 'Prepare your wrists, shoulders and hips', instruction: 'Move the wrists gently, reach overhead, and use a few easy glute bridges before exploring an arch.' },
+  'german-hang': { title: 'Prepare your shoulders and grip', instruction: 'Use gentle shoulder circles and hands-behind reaches. Keep every preparation fully supported.' },
+  rotation: { title: 'Prepare to turn comfortably', instruction: 'Let the feet, hips, ribs and shoulders move through small, easy turns on both sides.' },
 };
+
+function preparationFor(pathwayId: PathwayId) {
+  return pathwayPreparation[pathwayId] ?? {
+    title: `Prepare for ${pathwayById[pathwayId].name.toLowerCase()}`,
+    instruction: 'Rehearse today’s movement with more support, less range and very little effort.',
+  };
+}
 
 const arrivalInstruction: Record<BodyState, string> = {
   fresh: 'Walk or march easily, breathe naturally and let your joints begin moving through a comfortable range.',
@@ -106,7 +127,7 @@ function buildWarmUpSteps(bodyState: BodyState, pathways: PathwayId[], minutes: 
   pathways.slice(0, movementStepCount).forEach((pathwayId, index) => {
     steps.push({
       id: `prepare-${pathwayId}`,
-      ...pathwayPreparation[pathwayId],
+      ...preparationFor(pathwayId),
       minutes: durations[index + 1],
     });
   });

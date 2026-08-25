@@ -1,4 +1,21 @@
-export type PathwayId = 'squat' | 'push-up' | 'pull-up';
+export type PathwayId =
+  | 'squat'
+  | 'knee-flexion'
+  | 'hip-hinge'
+  | 'core'
+  | 'push-up'
+  | 'vertical-push'
+  | 'horizontal-pull'
+  | 'pull-up'
+  | 'resting-squat'
+  | 'pike'
+  | 'pancake'
+  | 'front-split'
+  | 'middle-split'
+  | 'bridge'
+  | 'german-hang'
+  | 'rotation';
+export type LegacyPathwayId = 'squat' | 'push-up' | 'pull-up';
 export type ScreenId = 'today' | 'progress' | 'explore' | 'diary' | 'settings';
 export type MetricKind = 'reps' | 'seconds';
 
@@ -38,7 +55,8 @@ export type EquipmentId =
   | 'resistance-band'
   | 'pull-up-bar'
   | 'rings'
-  | 'box-bench';
+  | 'box-bench'
+  | 'secure-anchor';
 
 export type BodyState = 'fresh' | 'steady' | 'stiff' | 'tired' | 'sore';
 export type InjuryContext = 'none' | 'yes' | 'unsure' | 'prefer-not';
@@ -117,7 +135,10 @@ export interface Pathway {
   id: PathwayId;
   name: string;
   longName: string;
-  category: 'Strength';
+  category: 'Strength' | 'Mobility';
+  focus: 'Lower body' | 'Core' | 'Upper body' | 'Whole body';
+  focusLabel: string;
+  primaryGoal: GoalId;
   symbol: string;
   tone: 'sage' | 'peach' | 'sand';
   description: string;
@@ -236,12 +257,12 @@ export interface TodaySessionPlan {
 
 // Retained only for safe local and cloud migration from the original prototype.
 export interface LegacyUserProgress {
-  selectedGoals: PathwayId[];
-  currentLevels: Record<PathwayId, number>;
+  selectedGoals: LegacyPathwayId[];
+  currentLevels: Record<LegacyPathwayId, number>;
   practices: Array<{
     id: string;
     date: string;
-    pathwayId: PathwayId;
+    pathwayId: LegacyPathwayId;
     exerciseId: string;
     exerciseTitle: string;
     sets: number | null;
@@ -256,7 +277,7 @@ export interface LegacyUserProgress {
   assessments: Array<{
     id: string;
     date: string;
-    pathwayId: PathwayId;
+    pathwayId: LegacyPathwayId;
     levelIndex: number;
     levelTitle: string;
   }>;

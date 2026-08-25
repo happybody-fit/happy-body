@@ -80,17 +80,17 @@ export const initialAssessmentLadders: InitialAssessmentLadder[] = [
     entryByCalibration: { gentle: 0, 'some-basics': 1, 'regular-training': 1, unsure: 1 },
     checks: [
       {
-        id: 'hip-extension', movementId: 'hip-extension', title: 'Heel-dig bridge', shortName: 'Hip extension', area: 'lower-body', equipment: ['none'], pathwayId: null, levelIndex: 0, showInBodyMap: true,
+        id: 'hip-extension', movementId: 'hip-hinge', title: 'Heel-dig bridge', shortName: 'Hip extension', area: 'lower-body', equipment: ['none'], pathwayId: 'hip-hinge', levelIndex: 0, showInBodyMap: true,
         instruction: 'Lie on your back with your knees bent and heels on the floor. Press gently through your heels, lift your hips through a comfortable range, and lower slowly. Try up to five repetitions.',
-        why: 'This begins our picture of hip-extension and hamstring capacity—the foundation of the future Hinge pathway.',
+        why: 'This begins our picture of hip-extension and hamstring capacity and places you on the Hip Hinge pathway.',
       },
       {
-        id: 'hip-extension-bridge', movementId: 'hip-extension', title: 'Controlled bridge hold', shortName: 'Bridge hold', area: 'lower-body', equipment: ['none'], pathwayId: null, levelIndex: 1,
+        id: 'hip-extension-bridge', movementId: 'hip-hinge', title: 'Controlled bridge hold', shortName: 'Bridge hold', area: 'lower-body', equipment: ['none'], pathwayId: 'hip-hinge', levelIndex: 1,
         instruction: 'Lift into a comfortable bridge, keep your pelvis steady, and hold for twenty seconds while breathing normally.',
         why: 'This checks whether sustained hip-extension control is already comfortable for you.',
       },
       {
-        id: 'hip-extension-single-leg', movementId: 'hip-extension', title: 'Single-leg bridge', shortName: 'Single-leg bridge', area: 'lower-body', equipment: ['none'], pathwayId: null, levelIndex: 2,
+        id: 'hip-extension-single-leg', movementId: 'hip-hinge', title: 'Single-leg bridge', shortName: 'Single-leg bridge', area: 'lower-body', equipment: ['none'], pathwayId: 'hip-hinge', levelIndex: 2,
         instruction: 'From a bridge position, keep one foot grounded and extend the other leg. Try three controlled lifts on each side without letting the pelvis twist.',
         why: 'This adds single-leg strength and pelvic control for people who already find an ordinary bridge easy.',
       },
@@ -103,17 +103,17 @@ export const initialAssessmentLadders: InitialAssessmentLadder[] = [
     entryByCalibration: { gentle: 0, 'some-basics': 1, 'regular-training': 1, unsure: 1 },
     checks: [
       {
-        id: 'pike-forward-fold', movementId: 'pike-forward-fold', title: 'Gentle pike / forward fold', shortName: 'Pike / fold', area: 'lower-body', equipment: ['none'], pathwayId: null, levelIndex: 0, showInBodyMap: true,
+        id: 'pike-forward-fold', movementId: 'pike', title: 'Gentle pike / forward fold', shortName: 'Pike / fold', area: 'lower-body', equipment: ['none'], pathwayId: 'pike', levelIndex: 1, showInBodyMap: true,
         instruction: 'Stand with something stable nearby. Soften your knees, fold forward comfortably, and let your hands rest wherever they reach. Rise slowly.',
         why: 'This gives us a first observation for the Pike pathway and the mobility of your posterior chain. We are looking for a comfortable starting range, not maximum depth.',
       },
       {
-        id: 'pike-controlled-fold', movementId: 'pike-forward-fold', title: 'Controlled standing pike', shortName: 'Standing pike', area: 'lower-body', equipment: ['none'], pathwayId: null, levelIndex: 1,
+        id: 'pike-controlled-fold', movementId: 'pike', title: 'Controlled standing pike', shortName: 'Standing pike', area: 'lower-body', equipment: ['none'], pathwayId: 'pike', levelIndex: 2,
         instruction: 'With your legs as straight as comfortably possible, fold from the hips and reach towards the floor. Pause for three calm breaths without bouncing.',
         why: 'This is a clearer middle check for someone who already folds comfortably with softened knees.',
       },
       {
-        id: 'pike-long-sit', movementId: 'pike-forward-fold', title: 'Long-sit pike', shortName: 'Long-sit pike', area: 'lower-body', equipment: ['none'], pathwayId: null, levelIndex: 2,
+        id: 'pike-long-sit', movementId: 'pike', title: 'Long-sit pike', shortName: 'Long-sit pike', area: 'lower-body', equipment: ['none'], pathwayId: 'pike', levelIndex: 3,
         instruction: 'Sit with both legs extended in front of you. Keeping the knees comfortably straight, tip forward from the hips and reach ahead without forcing your back or hamstrings.',
         why: 'This offers a more demanding pike position when the standing variation already feels easy.',
       },
@@ -126,24 +126,24 @@ export const initialAssessmentLadders: InitialAssessmentLadder[] = [
     entryByCalibration: { gentle: 0, 'some-basics': 1, 'regular-training': 2, unsure: 1 },
     checks: [
       {
-        id: 'core-control', movementId: 'core-control', title: 'Alternating core march', shortName: 'Core march', area: 'core', equipment: ['none'], pathwayId: null, levelIndex: 0, showInBodyMap: true,
+        id: 'core-control', movementId: 'core', title: 'Alternating core march', shortName: 'Core march', area: 'core', equipment: ['none'], pathwayId: 'core', levelIndex: 0, showInBodyMap: true,
         instruction: 'Lie on your back with your knees bent and feet on the floor. Keep breathing as you slowly lift one foot, place it down, and change sides. Try five on each side without rocking.',
-        why: 'This gives us a calm first observation for trunk control before future Core progressions become more demanding.',
+        why: 'This gives us a calm first observation for trunk control before the Core progressions become more demanding.',
       },
       {
-        id: 'core-dead-bug', movementId: 'core-control', title: 'Dead bug extension', shortName: 'Dead bug', area: 'core', equipment: ['none'], pathwayId: null, levelIndex: 1,
+        id: 'core-dead-bug', movementId: 'core', title: 'Dead bug extension', shortName: 'Dead bug', area: 'core', equipment: ['none'], pathwayId: 'core', levelIndex: 1,
         instruction: 'Lie on your back with hips and knees bent above you. Slowly extend the opposite arm and leg, return, and change sides. Try three per side while your trunk stays quiet.',
         why: 'This is a useful middle anchor for coordinated core control.',
       },
       {
-        id: 'core-tuck-hollow', movementId: 'core-control', title: 'Tuck hollow-body hold', shortName: 'Tuck hollow hold', area: 'core', equipment: ['none'], pathwayId: null, levelIndex: 2,
+        id: 'core-tuck-hollow', movementId: 'core', title: 'Tuck hollow-body hold', shortName: 'Tuck hollow hold', area: 'core', equipment: ['none'], pathwayId: 'core', levelIndex: 2,
         instruction: 'Lie on your back, bring your knees towards your chest, lift your head and shoulders comfortably, and hold a rounded tuck shape for fifteen seconds while breathing.',
         why: 'This checks stronger whole-body tension without immediately asking for a straight-leg hollow hold.',
       },
       {
-        id: 'core-hollow', movementId: 'core-control', title: 'Hollow-body hold', shortName: 'Hollow hold', area: 'core', equipment: ['none'], pathwayId: null, levelIndex: 3,
+        id: 'core-hollow', movementId: 'core', title: 'Hollow-body hold', shortName: 'Hollow hold', area: 'core', equipment: ['none'], pathwayId: 'core', levelIndex: 3,
         instruction: 'If the tuck hold is easy, gradually extend your legs and arms into the strongest hollow shape you can hold for fifteen controlled seconds. Keep the lower back comfortably connected to the floor.',
-        why: 'This places experienced movers further along the future Core pathway without jumping directly to a dragon flag attempt.',
+        why: 'This places experienced movers further along the Core pathway without jumping directly to a dragon flag attempt.',
       },
     ],
   },
@@ -245,7 +245,7 @@ export const initialAssessmentLadders: InitialAssessmentLadder[] = [
 ];
 
 export const foundationChecks = initialAssessmentLadders.flatMap((ladder) => ladder.checks);
-export const foundationMapChecks = foundationChecks.filter((check) => check.showInBodyMap);
+export const foundationMapChecks = foundationChecks.filter((check) => check.showInBodyMap && !check.pathwayId);
 export const foundationStateIds = [...new Set(foundationMapChecks.map((check) => check.movementId ?? check.id))];
 
 export const outcomeOptions = [

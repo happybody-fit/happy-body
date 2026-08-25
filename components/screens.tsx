@@ -7,7 +7,7 @@ import { findExercise, pathwayById, pathways } from '@/data/pathways';
 import { getTodaySessionPlan } from '@/lib/session-plan';
 import { parseImportedData } from '@/lib/storage';
 import type { BodyState, EquipmentId, GoalId, HappyBodyData, PathwayId, Recommendation, ScreenId, UserProfile } from '@/lib/types';
-import { formatDate, localDate, MovementStatusPill, PageIntro, PainNote, statusCopy, SteadinessCard } from './shared';
+import { formatDate, localDate, PageIntro, PainNote, SteadinessCard } from './shared';
 import { WarmUpDialog } from './warm-up-dialog';
 
 export function TodayScreen({
@@ -32,12 +32,6 @@ export function TodayScreen({
   const recommendations = session.recommendations;
   const name = data.profile.name.trim();
   const availableMinutes = session.availableMinutes;
-  const currentMapIds = [...foundationMapChecks.map((check) => check.id), ...pathways.map((pathway) => pathway.id)];
-  const assessedCount = currentMapIds.filter((id) => {
-    const state = data.movementStates[id];
-    return Boolean(state && state.status !== 'unknown');
-  }).length;
-  const movementWord = assessedCount === 1 ? 'movement' : 'movements';
   const firstRecommendation = recommendations[0];
   const allPractice = recommendations.every((item) => item.kind === 'practice');
   const planCount = recommendations.length;
@@ -118,7 +112,7 @@ export function TodayScreen({
       </section>
 
       <section className="today-lower-grid">
-        <div className="quiet-card"><p className="eyebrow">YOUR BODY MAP</p><h2>{assessedCount ? `We know enough to guide ${assessedCount} ${movementWord}.` : 'Your Body Map is ready to begin.'}</h2><p>{assessedCount ? 'Your known levels help us choose useful steps without starting you too easy or asking too much.' : 'A short movement check will help us find your first useful steps.'}</p><button className="secondary-button" onClick={() => navigate('progress')}>See what we know</button></div>
+        <div className="quiet-card"><p className="eyebrow">YOUR BODY MAP</p><h2>See your current levels and explore what comes next.</h2><button className="secondary-button" onClick={() => navigate('progress')}>Open my Body Map</button></div>
         <div className="quiet-card recent-card"><p className="eyebrow">RECENT PRACTICE</p><h2>{data.practices.length ? 'Continue from where you left off.' : 'Your practice history starts here.'}</h2>{data.practices.length ? data.practices.slice(0, 2).map((entry) => <div className="mini-event" key={entry.id}><span>{entry.completion === 'yes' ? '✓' : '◌'}</span><div><strong>{entry.exerciseTitle}</strong><small>{formatDate(entry.date)} · felt {entry.difficulty}</small></div></div>) : <p>Once you complete or record a practice, it will appear here for an easy return.</p>}<button className="text-button" onClick={() => navigate('diary')}>Open my diary →</button></div>
       </section>
       <PainNote />
@@ -180,34 +174,63 @@ function formatEquipment(equipment: EquipmentId[]) {
   return `${labels.slice(0, -1).join(', ')} + ${labels.at(-1)}`;
 }
 
-export function ProgressScreen({ data, startAssessment }: { data: HappyBodyData; startAssessment: (pathwayId?: PathwayId) => void }) {
+export function ProgressScreen({ data, startAssessment, openPathway }: { data: HappyBodyData; startAssessment: (pathwayId?: PathwayId) => void; openPathway: (pathwayId: PathwayId) => void }) {
   const movementCards = foundationMapChecks.map((check) => ({ id: check.id, title: check.shortName, detail: check.why, pathwayId: null as PathwayId | null }));
   return (
     <>
-      <PageIntro eyebrow="MY BODY MAP" title="A picture of what your body can do now." body="Assessed, unknown, changing and temporarily limited can all exist together. This map values capability without pretending every movement is known." action={<button className="primary-button" onClick={() => startAssessment()}>Repeat foundation check</button>} />
+      <PageIntro eyebrow="MY BODY MAP" title="Your strength and mobility, in one place." body="See your current level in each pathway and choose what you’d like to explore next." />
       {data.painFlags.some((flag) => flag.active) && <section className="pain-flags-card"><p className="eyebrow">PAIN FLAGS</p><h2>Loading suggestions are paused here.</h2>{data.painFlags.filter((flag) => flag.active).map((flag) => <div key={flag.id}><strong>{flag.bodyArea || flag.movementId}</strong><span>{formatDate(flag.createdAt)}</span></div>)}<PainNote compact /></section>}
-      <section className="body-map-section"><div className="section-heading"><div><p className="eyebrow">FOUNDATIONS</p><h2>Everyday movement capabilities</h2></div></div><div className="body-map-grid">{movementCards.map((movement) => { const state = data.movementStates[movement.id]; const safeState = state ?? { status: 'unknown' as const }; return <article className={`body-map-card status-border-${safeState.status}`} key={movement.id}><div><span className="map-symbol">{movement.title.slice(0, 1)}</span><MovementStatusPill status={safeState.status} /></div><h3>{movement.title}</h3><p>{statusCopy[safeState.status].description}</p>{state?.assessedAt && <small>Checked {formatDate(state.assessedAt)}</small>}</article>; })}</div></section>
-      <section className="body-map-section"><div className="section-heading"><div><p className="eyebrow">STRENGTH PATHWAYS</p><h2>Known steps and open questions</h2></div></div><div className="pathway-progress-grid">{pathways.map((pathway) => { const state = data.movementStates[pathway.id]; const current = state?.currentLevel !== null && state?.currentLevel !== undefined ? pathway.levels[state.currentLevel] : null; const next = current && state!.currentLevel! < pathway.levels.length - 1 ? pathway.levels[state!.currentLevel! + 1] : null; return <article className={`path-progress-card ${pathway.tone}`} key={pathway.id}><header><span className="pathway-symbol small">{pathway.symbol}</span><MovementStatusPill status={state?.status ?? 'unknown'} /></header><h2>{pathway.name}</h2>{current ? <><p className="current-capability"><small>CURRENT STEP</small><strong>{current.title}</strong></p><div className="level-line"><span style={{ width: `${((state!.currentLevel! + 1) / pathway.levels.length) * 100}%` }} /></div><p>{next ? <>Next visible step: <strong>{next.title}</strong></> : <>Pathway destination reached: <strong>{pathway.destination}</strong></>}</p></> : <p>Your level remains unknown. No beginner level has been assigned.</p>}<button className="secondary-button" onClick={() => startAssessment(pathway.id)}>{current ? 'Reassess this pathway' : 'Find my level'}</button></article>; })}</div></section>
-      <section className="capability-summary"><div><strong>{data.practices.filter((item) => item.completion !== 'not-today').length}</strong><span>practices completed or partly completed</span></div><div><strong>{data.assessments.length}</strong><span>honest movement observations</span></div><div><strong>{data.milestones.length}</strong><span>capability changes noticed</span></div></section>
+      <PathwayProgressSection eyebrow="8 STRENGTH PATHWAYS" title="Strength across your whole body" category="Strength" data={data} startAssessment={startAssessment} openPathway={openPathway} />
+      <PathwayProgressSection eyebrow="8 MOBILITY PATHWAYS" title="Mobility across your whole body" category="Mobility" data={data} startAssessment={startAssessment} openPathway={openPathway} />
+      <section className="movement-check-panel">
+        <div><p className="eyebrow">MOVEMENT CHECK</p><h2>Update your starting levels</h2><p>Repeat this short check whenever you want to revisit several pathways.</p></div>
+        <div className="movement-check-results">{movementCards.map((movement) => { const state = data.movementStates[movement.id]; const known = Boolean(state && state.status !== 'unknown'); return <div key={movement.id}><span className="map-symbol small">{movement.title.slice(0, 1)}</span><p><small>{movement.title}</small><strong>{known ? 'Starting point saved' : 'Not checked yet'}</strong>{state?.assessedAt && <time>Checked {formatDate(state.assessedAt)}</time>}</p></div>; })}</div>
+        <button className="secondary-button" onClick={() => startAssessment()}>{movementCards.some((movement) => data.movementStates[movement.id]?.status !== 'unknown') ? 'Repeat movement check' : 'Begin movement check'}</button>
+      </section>
     </>
   );
 }
 
-export function ExploreScreen({ data, updateProfile, startAssessment, openPractice }: { data: HappyBodyData; updateProfile: (profile: UserProfile) => void; startAssessment: (id: PathwayId) => void; openPractice: (item: Recommendation | null) => void }) {
-  const [activeId, setActiveId] = useState<PathwayId>('squat');
+function PathwayProgressSection({ eyebrow, title, category, data, startAssessment, openPathway }: { eyebrow: string; title: string; category: 'Strength' | 'Mobility'; data: HappyBodyData; startAssessment: (pathwayId?: PathwayId) => void; openPathway: (pathwayId: PathwayId) => void }) {
+  const categoryPathways = pathways.filter((pathway) => pathway.category === category);
+  return (
+    <section className="body-map-section">
+      <div className="section-heading"><div><p className="eyebrow">{eyebrow}</p><h2>{title}</h2></div></div>
+      <div className="pathway-progress-grid">{categoryPathways.map((pathway) => {
+        const state = data.movementStates[pathway.id];
+        const current = state?.currentLevel !== null && state?.currentLevel !== undefined ? pathway.levels[state.currentLevel] : null;
+        const next = current && state!.currentLevel! < pathway.levels.length - 1 ? pathway.levels[state!.currentLevel! + 1] : null;
+        const painPaused = state?.status === 'pain-flagged';
+        const statusLabel = painPaused ? 'Paused after pain' : current ? 'Current step saved' : 'Not checked yet';
+        return <article className={`path-progress-card compact ${pathway.tone} ${current ? 'known' : 'unknown'}`} key={pathway.id}>
+          <header><span className="pathway-symbol small">{pathway.symbol}</span><span className={`map-status-label ${current ? 'known' : 'unknown'} ${painPaused ? 'paused' : ''}`}>{statusLabel}</span></header>
+          <small className="path-focus-label">{pathway.focus}</small><h2>{pathway.name}</h2>
+          {current && <><p className="current-capability"><small>CURRENT STEP</small><strong>{current.title}</strong></p><p className="next-capability">{next ? <>Next: <strong>{next.title}</strong></> : <>Destination reached: <strong>{pathway.destination}</strong></>}</p></>}
+          <div className="path-card-actions">{current ? <><button className="secondary-button" onClick={() => openPathway(pathway.id)}>View pathway</button><button className="text-button" onClick={() => startAssessment(pathway.id)}>Reassess level</button></> : <><button className="secondary-button" onClick={() => startAssessment(pathway.id)}>Find my level</button><button className="text-button" onClick={() => openPathway(pathway.id)}>View pathway</button></>}</div>
+        </article>;
+      })}</div>
+    </section>
+  );
+}
+
+export function ExploreScreen({ data, initialPathwayId, updateProfile, startAssessment, openPractice }: { data: HappyBodyData; initialPathwayId: PathwayId; updateProfile: (profile: UserProfile) => void; startAssessment: (id: PathwayId) => void; openPractice: (item: Recommendation | null) => void }) {
+  const [activeId, setActiveId] = useState<PathwayId>(initialPathwayId);
+  const [category, setCategory] = useState<'Strength' | 'Mobility'>(pathwayById[initialPathwayId].category);
   const pathway = pathwayById[activeId];
   const state = data.movementStates[activeId];
-  const specificGoal: Record<PathwayId, GoalId> = { squat: 'pistol-squat', 'push-up': 'push-up', 'pull-up': 'pull-up' };
-  const selected = data.profile.skillInterests.includes(specificGoal[activeId]) || data.profile.primaryGoal === specificGoal[activeId] || data.profile.secondaryGoals.includes(specificGoal[activeId]);
-  const toggle = () => updateProfile({ ...data.profile, skillInterests: selected ? data.profile.skillInterests.filter((item) => item !== specificGoal[activeId]) : [...data.profile.skillInterests, specificGoal[activeId]] });
+  const categoryPathways = pathways.filter((item) => item.category === category);
+  const selected = data.profile.skillInterests.includes(pathway.primaryGoal) || data.profile.primaryGoal === pathway.primaryGoal || data.profile.secondaryGoals.includes(pathway.primaryGoal);
+  const toggle = () => updateProfile({ ...data.profile, skillInterests: selected ? data.profile.skillInterests.filter((item) => item !== pathway.primaryGoal) : [...data.profile.skillInterests, pathway.primaryGoal] });
+  const chooseCategory = (next: 'Strength' | 'Mobility') => { setCategory(next); setActiveId(pathways.find((item) => item.category === next)!.id); };
   return (
     <>
-      <PageIntro eyebrow="EXPLORE" title="See the whole path without rushing it." body="Explore every developed level, understand what comes next, and choose your own practice. A visible destination is not a demand to reach it." />
-      <div className="explore-tabs" role="tablist">{pathways.map((item) => <button role="tab" aria-selected={activeId === item.id} className={activeId === item.id ? 'active' : ''} key={item.id} onClick={() => setActiveId(item.id)}><span>{item.symbol}</span><strong>{item.name}</strong><small>{item.levels.length} steps</small></button>)}</div>
+      <PageIntro eyebrow="EXPLORE 16 PATHWAYS" title="See the whole path without rushing it." body="Explore eight strength and eight mobility pathways, find your current step, and see where each direction can lead. A visible destination is never a demand to reach it." />
+      <div className="explore-category-switch" role="tablist" aria-label="Pathway category">{(['Strength', 'Mobility'] as const).map((item) => <button role="tab" aria-selected={category === item} className={category === item ? 'active' : ''} key={item} onClick={() => chooseCategory(item)}>{item}<small>8 pathways</small></button>)}</div>
+      <div className="explore-tabs" role="tablist" aria-label={`${category} pathways`}>{categoryPathways.map((item) => <button role="tab" aria-selected={activeId === item.id} className={activeId === item.id ? 'active' : ''} key={item.id} onClick={() => setActiveId(item.id)}><span>{item.symbol}</span><strong>{item.name}</strong><small>{item.levels.length} steps</small></button>)}</div>
       <section className={`explore-hero ${pathway.tone}`}><div><p className="eyebrow">{pathway.longName}</p><h1>{pathway.name}</h1><p>{pathway.description}</p><div className="hero-actions"><button className="primary-button" onClick={() => startAssessment(pathway.id)}>{state?.currentLevel !== null && state?.currentLevel !== undefined ? 'Reassess my level' : 'Find my level'} →</button><button className={selected ? 'selected-button' : 'secondary-button'} onClick={toggle}>{selected ? '✓ In my goals' : '+ Add to my goals'}</button></div></div><div className="destination-medallion"><small>PATHWAY DESTINATION</small><strong>{pathway.destination}</strong></div></section>
-      <section className="pathway-ladder"><div className="section-heading"><div><p className="eyebrow">THE PATHWAY</p><h2>From first contact to advanced capability</h2></div></div>{pathway.levels.map((level, index) => { const current = state?.currentLevel === index; const knownIndex = state?.currentLevel ?? -1; const done = knownIndex >= 0 && index < knownIndex; const item = level.exercises[0]; return <article className={`ladder-step ${current ? 'current' : ''} ${done ? 'done' : ''}`} key={level.id}><span className="step-index">{done ? '✓' : index + 1}</span><div className="ladder-main"><div><small>{current ? 'YOUR CURRENT STEP' : index === knownIndex + 1 ? 'NEXT VISIBLE STEP' : `LEVEL ${index + 1}`}</small><h3>{level.title}</h3><p>{level.description}</p></div><details><summary>Exercise guidance</summary><div><p><strong>{item.title}</strong> · {item.sets} sets · {item.reps ?? item.hold}</p><ul>{item.cues.map((cue) => <li key={cue}>{cue}</li>)}</ul><button className="text-button" onClick={() => openPractice({ id: `explore-${item.id}`, kind: 'practice', movementId: pathway.id, pathwayId: pathway.id, title: item.title, reason: 'You chose this from the full pathway.', detail: item.purpose, minutes: item.durationMinutes, score: 0, exerciseId: item.id })}>Practise or record this →</button></div></details></div><span className="milestone-copy">{level.milestone}</span></article>; })}</section>
+      <section className="pathway-ladder"><div className="section-heading"><div><p className="eyebrow">THE FIRST-PASS PATHWAY</p><h2>From an accessible beginning to {pathway.destination.toLowerCase()}</h2></div></div>{pathway.levels.map((level, index) => { const current = state?.currentLevel === index; const knownIndex = state?.currentLevel ?? -1; const done = knownIndex >= 0 && index < knownIndex; const item = level.exercises[0]; return <article className={`ladder-step ${current ? 'current' : ''} ${done ? 'done' : ''}`} key={level.id}><span className="step-index">{done ? '✓' : index + 1}</span><div className="ladder-main"><div><small>{current ? 'YOUR CURRENT STEP' : index === knownIndex + 1 ? 'NEXT VISIBLE STEP' : `LEVEL ${index + 1}`}</small><h3>{level.title}</h3><p>{level.description}</p></div><details><summary>Exercise guidance</summary><div><p><strong>{item.title}</strong> · {item.sets} sets · {item.reps ?? item.hold}</p><ul>{item.cues.map((cue) => <li key={cue}>{cue}</li>)}</ul><button className="text-button" onClick={() => openPractice({ id: `explore-${item.id}`, kind: 'practice', movementId: pathway.id, pathwayId: pathway.id, title: item.title, reason: 'You chose this from the full pathway.', detail: item.purpose, minutes: item.durationMinutes, score: 0, exerciseId: item.id })}>Practise or record this →</button></div></details></div><span className="milestone-copy">{level.milestone}</span></article>; })}</section>
       <SteadinessCard />
-      <section className="future-goals"><div><p className="eyebrow">VISIBLE, NOT INVENTED</p><h2>Goals waiting for verified pathways</h2><p>These can remain part of your direction. We will not assign made-up levels or random exercises while their content is being developed.</p></div><div className="future-goal-grid">{goalOptions.filter((goal) => ['handstand', 'front-split', 'middle-split'].includes(goal.id)).map((goal) => <span key={goal.id}><strong>{goal.label}</strong><small>Pathway planned</small></span>)}</div></section>
+      <section className="future-goals"><div><p className="eyebrow">STILL DISTINCT</p><h2>Hand balance remains its own future pathway.</h2><p>Vertical pushing now supports handstand strength, but freestanding balance and handstand walking need their own careful progression rather than being folded into a strength score.</p></div><div className="future-goal-grid">{goalOptions.filter((goal) => ['handstand', 'handstand-walk'].includes(goal.id)).map((goal) => <span key={goal.id}><strong>{goal.label}</strong><small>Dedicated pathway planned</small></span>)}</div></section>
       <PainNote />
     </>
   );

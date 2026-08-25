@@ -1,4 +1,5 @@
-import type { AssessmentCheckpoint, EquipmentId, Exercise, MetricKind, Pathway, ProgressionLevel } from '@/lib/types';
+import type { AssessmentCheckpoint, EquipmentId, Exercise, MetricKind, Pathway, PathwayId, ProgressionLevel } from '@/lib/types';
+import { expandedPathways } from './expanded-pathways';
 
 type ExerciseSeed = {
   id: string;
@@ -52,7 +53,7 @@ function checkpoint(id: string, title: string, instruction: string, levelIndex: 
     id,
     title,
     instruction,
-    comfortPrompt: 'Choose the answer that best describes what happened today. This is information, not a pass or fail.',
+    comfortPrompt: 'Choose the answer that best describes what happened today.',
     equipment,
     levelIndex,
   };
@@ -62,12 +63,15 @@ const squatVideo = 'qgugh6l0zeU';
 const pushVideo = 'J2vaGZ7wSco';
 const pullVideo = 'B_VkNQS5YLs';
 
-export const pathways: Pathway[] = [
+const originalPathways: Pathway[] = [
   {
     id: 'squat',
     name: 'Squat',
     longName: 'Squat pathway',
     category: 'Strength',
+    focus: 'Lower body',
+    focusLabel: 'lower-body strength',
+    primaryGoal: 'pistol-squat',
     symbol: 'S',
     tone: 'sage',
     description: 'Build comfortable leg strength, balance and depth for sitting, standing and moving close to the ground.',
@@ -97,6 +101,9 @@ export const pathways: Pathway[] = [
     name: 'Push-up',
     longName: 'Horizontal push pathway',
     category: 'Strength',
+    focus: 'Upper body',
+    focusLabel: 'horizontal pushing strength',
+    primaryGoal: 'push-up',
     symbol: 'P',
     tone: 'peach',
     description: 'Build confident whole-body pushing strength from the wall towards advanced hand-supported shapes.',
@@ -127,6 +134,9 @@ export const pathways: Pathway[] = [
     name: 'Pull-up',
     longName: 'Vertical pull pathway',
     category: 'Strength',
+    focus: 'Upper body',
+    focusLabel: 'vertical pulling strength',
+    primaryGoal: 'pull-up',
     symbol: 'U',
     tone: 'sand',
     description: 'Develop grip, overhead confidence and pulling strength towards a one-arm pull-up.',
@@ -154,6 +164,14 @@ export const pathways: Pathway[] = [
     ],
   },
 ];
+
+const pathwayOrder: PathwayId[] = [
+  'squat', 'knee-flexion', 'hip-hinge', 'core', 'push-up', 'vertical-push', 'horizontal-pull', 'pull-up',
+  'resting-squat', 'pike', 'pancake', 'front-split', 'middle-split', 'bridge', 'german-hang', 'rotation',
+];
+const allPathways = [...originalPathways, ...expandedPathways];
+
+export const pathways: Pathway[] = pathwayOrder.map((id) => allPathways.find((pathway) => pathway.id === id)!);
 
 export const pathwayById = Object.fromEntries(pathways.map((pathway) => [pathway.id, pathway])) as Record<Pathway['id'], Pathway>;
 
