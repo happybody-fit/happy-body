@@ -2,12 +2,12 @@
 
 import { useMemo, useRef, useState } from 'react';
 import { foundationMapChecks } from '@/data/assessments';
-import { equipmentOptions, goalById, goalOptions } from '@/data/catalog';
+import { equipmentOptions, goalById } from '@/data/catalog';
 import { findExercise, pathwayById, pathways } from '@/data/pathways';
 import { getTodaySessionPlan } from '@/lib/session-plan';
 import { parseImportedData } from '@/lib/storage';
 import type { BodyState, EquipmentId, GoalId, HappyBodyData, PathwayId, Recommendation, ScreenId, UserProfile } from '@/lib/types';
-import { formatDate, localDate, PageIntro, PainNote, SteadinessCard } from './shared';
+import { formatDate, localDate, PageIntro, PainNote } from './shared';
 import { WarmUpDialog } from './warm-up-dialog';
 
 export function TodayScreen({
@@ -229,8 +229,6 @@ export function ExploreScreen({ data, initialPathwayId, updateProfile, startAsse
       <div className="explore-tabs" role="tablist" aria-label={`${category} pathways`}>{categoryPathways.map((item) => <button role="tab" aria-selected={activeId === item.id} className={activeId === item.id ? 'active' : ''} key={item.id} onClick={() => setActiveId(item.id)}><span>{item.symbol}</span><strong>{item.name}</strong><small>{item.levels.length} steps</small></button>)}</div>
       <section className={`explore-hero ${pathway.tone}`}><div><p className="eyebrow">{pathway.longName}</p><h1>{pathway.name}</h1><p>{pathway.description}</p><div className="hero-actions"><button className="primary-button" onClick={() => startAssessment(pathway.id)}>{state?.currentLevel !== null && state?.currentLevel !== undefined ? 'Reassess my level' : 'Find my level'} →</button><button className={selected ? 'selected-button' : 'secondary-button'} onClick={toggle}>{selected ? '✓ In my goals' : '+ Add to my goals'}</button></div></div><div className="destination-medallion"><small>PATHWAY DESTINATION</small><strong>{pathway.destination}</strong></div></section>
       <section className="pathway-ladder"><div className="section-heading"><div><p className="eyebrow">THE FIRST-PASS PATHWAY</p><h2>From an accessible beginning to {pathway.destination.toLowerCase()}</h2></div></div>{pathway.levels.map((level, index) => { const current = state?.currentLevel === index; const knownIndex = state?.currentLevel ?? -1; const done = knownIndex >= 0 && index < knownIndex; const item = level.exercises[0]; return <article className={`ladder-step ${current ? 'current' : ''} ${done ? 'done' : ''}`} key={level.id}><span className="step-index">{done ? '✓' : index + 1}</span><div className="ladder-main"><div><small>{current ? 'YOUR CURRENT STEP' : index === knownIndex + 1 ? 'NEXT VISIBLE STEP' : `LEVEL ${index + 1}`}</small><h3>{level.title}</h3><p>{level.description}</p></div><details><summary>Exercise guidance</summary><div><p><strong>{item.title}</strong> · {item.sets} sets · {item.reps ?? item.hold}</p><ul>{item.cues.map((cue) => <li key={cue}>{cue}</li>)}</ul><button className="text-button" onClick={() => openPractice({ id: `explore-${item.id}`, kind: 'practice', movementId: pathway.id, pathwayId: pathway.id, title: item.title, reason: 'You chose this from the full pathway.', detail: item.purpose, minutes: item.durationMinutes, score: 0, exerciseId: item.id })}>Practise or record this →</button></div></details></div><span className="milestone-copy">{level.milestone}</span></article>; })}</section>
-      <SteadinessCard />
-      <section className="future-goals"><div><p className="eyebrow">STILL DISTINCT</p><h2>Hand balance remains its own future pathway.</h2><p>Vertical pushing now supports handstand strength, but freestanding balance and handstand walking need their own careful progression rather than being folded into a strength score.</p></div><div className="future-goal-grid">{goalOptions.filter((goal) => ['handstand', 'handstand-walk'].includes(goal.id)).map((goal) => <span key={goal.id}><strong>{goal.label}</strong><small>Dedicated pathway planned</small></span>)}</div></section>
       <PainNote />
     </>
   );

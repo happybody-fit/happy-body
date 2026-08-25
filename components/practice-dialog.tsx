@@ -3,7 +3,16 @@
 import { FormEvent, useMemo, useState } from 'react';
 import { findExercise, pathwayById, pathways } from '@/data/pathways';
 import type { PathwayId, PracticeEntry, Recommendation } from '@/lib/types';
-import { localDate, PainNote, SteadinessCard, uid } from './shared';
+import { localDate, PainNote, uid } from './shared';
+
+type PracticeFeeling = 'easy' | 'right' | 'too-much' | 'pain';
+
+const feelingOptions: { id: PracticeFeeling; label: string }[] = [
+  { id: 'easy', label: 'Easy' },
+  { id: 'right', label: 'About right' },
+  { id: 'too-much', label: 'Too much' },
+  { id: 'pain', label: 'Pain' },
+];
 
 export function PracticeDialog({ recommendation, close, save }: { recommendation: Recommendation | null; close: () => void; save: (entry: PracticeEntry) => void }) {
   const suggested = recommendation?.exerciseId ? findExercise(recommendation.exerciseId) : null;
@@ -12,13 +21,11 @@ export function PracticeDialog({ recommendation, close, save }: { recommendation
   const availableExercises = useMemo(() => pathwayById[pathwayId].levels.flatMap((item) => item.exercises), [pathwayId]);
   const [exerciseId, setExerciseId] = useState(suggested?.exercise.id ?? availableExercises[0].id);
   const [completion, setCompletion] = useState<PracticeEntry['completion'] | null>(null);
-  const [difficulty, setDifficulty] = useState<PracticeEntry['difficulty'] | null>(null);
-  const [bodyAfter, setBodyAfter] = useState<PracticeEntry['bodyAfter'] | null>(null);
-  const [showDetails, setShowDetails] = useState(false);
+  const [feeling, setFeeling] = useState<PracticeFeeling | null>(null);
+  const [showNote, setShowNote] = useState(false);
   const [date, setDate] = useState(localDate());
   const [sets, setSets] = useState('');
   const [amount, setAmount] = useState('');
-  const [bodyDuring, setBodyDuring] = useState('');
   const [notes, setNotes] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const item = selfChosen ? availableExercises.find((candidate) => candidate.id === exerciseId) ?? availableExercises[0] : suggested!.exercise;
@@ -31,11 +38,13 @@ export function PracticeDialog({ recommendation, close, save }: { recommendation
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (!completion || !difficulty || !bodyAfter) return;
+    if (!completion || (completion !== 'not-today' && !feeling)) return;
+    const difficulty: PracticeEntry['difficulty'] = feeling === 'easy' ? 'easy' : feeling === 'too-much' || feeling === 'pain' ? 'challenging' : 'good';
+    const bodyAfter: PracticeEntry['bodyAfter'] = feeling === 'pain' ? 'pain' : feeling === 'too-much' ? 'tired' : 'good';
     save({
       id: uid(), date, pathwayId: pathway.id, movementId: pathway.id, exerciseId: item.id, exerciseTitle: item.title,
       completion, difficulty, bodyAfter, sets: Number(sets) || null, amount: Number(amount) || null, metric: item.metric,
-      bodyDuring: bodyDuring.trim(), notes: notes.trim(), videoUrl: videoUrl.trim(), source: selfChosen ? 'self-chosen' : 'recommendation',
+      bodyDuring: '', notes: notes.trim(), videoUrl: videoUrl.trim(), source: selfChosen ? 'self-chosen' : 'recommendation',
     });
   };
 
@@ -49,18 +58,17 @@ export function PracticeDialog({ recommendation, close, save }: { recommendation
         <div className="practice-prescription"><div><small>SUGGESTION</small><strong>{item.sets} sets · {item.reps ?? item.hold}</strong></div><div><small>REST</small><strong>{item.rest}</strong></div></div>
         <ol className="cue-list">{item.cues.map((cue) => <li key={cue}>{cue}</li>)}</ol>
         <details className="guidance-details"><summary>More guidance</summary><div className="guidance-grid"><div><strong>What it may feel like</strong><p>{item.feel}</p></div><div><strong>Step back when</strong><p>{item.regressWhen}</p></div><div><strong>Explore the next step when</strong><p>{item.progressWhen}</p></div><div><strong>Watch for</strong><p>{item.commonMistakes.join(' · ')}</p></div></div></details>
-        <SteadinessCard />
         {item.videoId && <details className="video-details"><summary>Watch demonstration <span>Prototype video</span></summary><div className="video-wrap"><iframe src={`https://www.youtube-nocookie.com/embed/${item.videoId}`} title={`${item.title} demonstration`} loading="lazy" referrerPolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /></div><p>This public demonstration is a temporary placeholder. Happy Body-owned teaching will replace it before a broad content launch.</p></details>}
 
         <form className="quick-log" onSubmit={submit}>
-          <div className="quick-log-heading"><div><p className="eyebrow">QUICK LOG</p><h3>What happened?</h3></div>{!selfChosen && <button type="button" className="text-button" onClick={() => setSelfChosen(true)}>I worked on something else</button>}</div>
-          <fieldset><legend>Completed</legend><div className="three-choices">{[['yes', 'Yes'], ['partly', 'Partly'], ['not-today', 'Not today']].map(([id, label]) => <button type="button" key={id} className={completion === id ? 'selected' : ''} onClick={() => setCompletion(id as PracticeEntry['completion'])}>{label}</button>)}</div></fieldset>
-          <fieldset><legend>Difficulty</legend><div className="three-choices">{[['easy', 'Easy'], ['good', 'Good'], ['challenging', 'Challenging']].map(([id, label]) => <button type="button" key={id} className={difficulty === id ? 'selected' : ''} onClick={() => setDifficulty(id as PracticeEntry['difficulty'])}>{label}</button>)}</div></fieldset>
-          <fieldset><legend>Body after</legend><div className="five-choices">{[['better', 'Better'], ['good', 'Good'], ['tired', 'Tired'], ['sore', 'Sore'], ['pain', 'Pain']].map(([id, label]) => <button type="button" key={id} className={`${bodyAfter === id ? 'selected' : ''} ${id === 'pain' ? 'pain-choice' : ''}`} onClick={() => setBodyAfter(id as PracticeEntry['bodyAfter'])}>{label}</button>)}</div></fieldset>
-          <button type="button" className="details-toggle" onClick={() => setShowDetails((value) => !value)} aria-expanded={showDetails}>{showDetails ? 'Hide optional details' : '+ Add optional details'}</button>
-          {showDetails && <div className="optional-log-details"><div className="form-grid"><label>Date<input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label><label>Sets<input type="number" inputMode="numeric" min="0" value={sets} onChange={(event) => setSets(event.target.value)} /></label></div><label>{item.metric === 'seconds' ? 'Hold time in seconds' : 'Repetitions'}<input type="number" inputMode="numeric" min="0" value={amount} onChange={(event) => setAmount(event.target.value)} /></label><label>During practice<input value={bodyDuring} onChange={(event) => setBodyDuring(event.target.value)} placeholder="Steady, stiff, uncertain…" /></label><label>Notes<textarea rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="What felt easier, different or useful?" /></label><label>Optional YouTube progress-video link<input type="url" value={videoUrl} onChange={(event) => setVideoUrl(event.target.value)} placeholder="https://youtube.com/…" /></label></div>}
-          {bodyAfter === 'pain' && <PainNote compact />}
-          <button className="primary-button save-quick-log" disabled={!completion || !difficulty || !bodyAfter}>Save to my diary →</button>
+          <div className="quick-log-heading"><div><p className="eyebrow">QUICK LOG</p><h3>How did it go?</h3></div>{!selfChosen && <button type="button" className="text-button" onClick={() => setSelfChosen(true)}>I worked on something else</button>}</div>
+          <fieldset><legend>Did you practise it?</legend><div className="three-choices">{[['yes', 'Completed'], ['partly', 'Partly'], ['not-today', 'Not today']].map(([id, label]) => <button type="button" key={id} className={completion === id ? 'selected' : ''} onClick={() => { const next = id as PracticeEntry['completion']; setCompletion(next); if (next === 'not-today') setFeeling(null); }}>{label}</button>)}</div></fieldset>
+          {completion && completion !== 'not-today' && <fieldset><legend>How did it feel?</legend><div className="four-choices">{feelingOptions.map(({ id, label }) => <button type="button" key={id} className={`${feeling === id ? 'selected' : ''} ${id === 'pain' ? 'pain-choice' : ''}`} onClick={() => setFeeling(id)}>{label}</button>)}</div></fieldset>}
+          <button type="button" className="details-toggle" onClick={() => setShowNote((value) => !value)} aria-expanded={showNote}>{showNote ? 'Hide note' : '+ Add a note (optional)'}</button>
+          {showNote && <label className="quick-note">Anything you want to remember?<textarea rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="What felt useful or different?" /></label>}
+          {completion !== 'not-today' && <details className="advanced-log-details"><summary>Add numbers or a progress video</summary><div className="optional-log-details"><div className="form-grid"><label>Date<input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label><label>Sets<input type="number" inputMode="numeric" min="0" value={sets} onChange={(event) => setSets(event.target.value)} /></label></div><label>{item.metric === 'seconds' ? 'Hold time in seconds' : 'Repetitions'}<input type="number" inputMode="numeric" min="0" value={amount} onChange={(event) => setAmount(event.target.value)} /></label><label>Optional YouTube progress-video link<input type="url" value={videoUrl} onChange={(event) => setVideoUrl(event.target.value)} placeholder="https://youtube.com/…" /></label></div></details>}
+          {feeling === 'pain' && <PainNote compact />}
+          <button className="primary-button save-quick-log" disabled={!completion || (completion !== 'not-today' && !feeling)}>Save practice →</button>
         </form>
       </section>
     </div>

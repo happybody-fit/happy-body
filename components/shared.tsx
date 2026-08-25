@@ -106,12 +106,3 @@ export const statusCopy: Record<MovementStatus, { label: string; description: st
 export function MovementStatusPill({ status }: { status: MovementStatus }) {
   return <span className={`status-pill status-${status}`}>{statusCopy[status].label}</span>;
 }
-
-export function SteadinessCard() {
-  return (
-    <details className="steadiness-card">
-      <summary><span>Steadiness and ease</span><small>Sthira Sukham Asanam</small></summary>
-      <div><p>A useful practice is steady enough to feel organised and easy enough that you can keep breathing. The goal is not to make every movement effortless—it is to choose a challenge you can meet without force.</p></div>
-    </details>
-  );
-}
