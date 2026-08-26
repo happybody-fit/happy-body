@@ -43,7 +43,7 @@ export function AssessmentFlow({
   mode: 'initial' | 'pathway';
   pathwayId?: PathwayId;
   onResult: (payload: ResultPayload) => void;
-  onClose: () => void;
+  onClose: (destination?: 'today' | 'progress') => void;
 }) {
   const pathway = pathwayId ? pathwayById[pathwayId] : null;
   const availableEquipment = useMemo(() => new Set<string>(data.profile.equipment), [data.profile.equipment]);
@@ -210,7 +210,7 @@ export function AssessmentFlow({
     return (
       <div className="focus-shell">
         <section className="assessment-card calibration-card" aria-labelledby="calibration-title">
-          <header className="focus-header"><button className="quiet-close" onClick={onClose}>← Leave check</button><span>Before we begin</span></header>
+          <header className="focus-header"><button className="quiet-close" onClick={() => onClose('today')}>← Leave check</button><span>Before we begin</span></header>
           <div className="calibration-heading"><p className="eyebrow">FINDING YOUR STARTING POINT</p><h1 id="calibration-title">Where would you like us to begin?</h1><p>This only chooses your first movement. After every answer, we’ll move up, move down, or save the level that feels right for you.</p></div>
           <div className="calibration-grid">{calibrationOptions.map((option) => <button type="button" key={option.id} onClick={() => beginInitialAssessment(option.id)}><span aria-hidden="true">{option.id === 'gentle' ? '○' : option.id === 'some-basics' ? '◐' : option.id === 'regular-training' ? '●' : '◇'}</span><strong>{option.label}</strong><small>{option.description}</small><i aria-hidden="true">→</i></button>)}</div>
           <p className="adaptive-explainer"><strong>You are not choosing a label.</strong> This is simply a quicker route to a useful starting point, and you can stop any movement at any time.</p>
@@ -226,8 +226,6 @@ export function AssessmentFlow({
     const finalResults = [...finalByMovement.values()];
     const unknown = finalResults.filter((item) => item.outcome === 'unsure' || item.outcome === 'no-equipment').length;
     const pain = finalResults.some((item) => item.outcome === 'pain');
-    const observed = finalResults.length - unknown;
-    const pathwayStarts = new Set(finalResults.filter((item) => item.pathwayId && item.levelIndex !== null).map((item) => item.pathwayId)).size;
     const resolvedLevelIndex = [...savedResults].reverse().find((item) => item.levelIndex !== null)?.levelIndex ?? null;
     const level = pathway && resolvedLevelIndex !== null ? pathway.levels[resolvedLevelIndex] : null;
     return (
@@ -235,9 +233,9 @@ export function AssessmentFlow({
         <section className="assessment-result-card">
           <span className="result-flower" aria-hidden="true">✦</span>
           <p className="eyebrow">YOUR BODY MAP IS UPDATED</p>
-          <h1>{level ? level.title : mode === 'initial' ? 'Your starting picture is taking shape' : pain ? 'This movement is paused' : 'A useful starting picture'}</h1>
-          {level ? <p>Your current saved step is <strong>{level.title}</strong>. The next level remains visible, but you do not need to rush towards it.</p> : mode === 'initial' ? <p>We placed {observed} movement area{observed === 1 ? '' : 's'} and found {pathwayStarts} pathway starting point{pathwayStarts === 1 ? '' : 's'}{unknown ? `. ${unknown} area${unknown === 1 ? '' : 's'} stayed open for later` : ''}. The rest of your Body Map can grow gradually.</p> : <p>{pain ? 'We stopped when pain appeared and will keep this movement out of loading suggestions.' : 'We saved what you noticed today without guessing a level.'}</p>}
-          <div className="result-actions"><button className="primary-button" onClick={onClose}>See what may be useful today →</button></div>
+          <h1>{level ? level.title : mode === 'initial' ? 'Your starting points are ready' : pain ? 'This movement is paused' : 'A useful starting picture'}</h1>
+          {level ? <p>Your current saved step is <strong>{level.title}</strong>. The next level remains visible, but you do not need to rush towards it.</p> : mode === 'initial' ? <><p>Based on what you shared, we can now guide your first practices. You can explore the rest of your Body Map whenever you’re ready.</p>{unknown > 0 && <p className="result-open-note">{unknown === 1 ? 'One movement needs' : `${unknown} movements need`} a little more information before we suggest a starting point.</p>}</> : <p>{pain ? 'We stopped when pain appeared and will keep this movement out of loading suggestions.' : 'We saved what you noticed today without guessing a level.'}</p>}
+          <div className="result-actions"><button className="primary-button" onClick={() => onClose(mode === 'initial' ? 'progress' : 'today')}>{mode === 'initial' ? 'See my Body Map' : 'See what may be useful today'} →</button></div>
           <p className="quiet-result-note">You can repeat any check from Progress. A result is never a medical diagnosis.</p>
         </section>
       </div>
@@ -253,7 +251,7 @@ export function AssessmentFlow({
   return (
     <div className="focus-shell">
       <section className="assessment-card" aria-labelledby="assessment-title">
-        <header className="focus-header"><button className="quiet-close" onClick={onClose}>← Leave check</button><span>{mode === 'initial' ? `Part ${ladderIndex + 1} of ${initialLadders.length}` : `${pathStep + 1} of ${pathwayChecks.length}`}</span></header>
+        <header className="focus-header"><button className="quiet-close" onClick={() => onClose('today')}>← Leave check</button><span>{mode === 'initial' ? `Part ${ladderIndex + 1} of ${initialLadders.length}` : `${pathStep + 1} of ${pathwayChecks.length}`}</span></header>
         <div className="assessment-track">{Array.from({ length: progressLength }, (_, index) => <i className={index <= progressIndex ? 'filled' : ''} key={index} />)}</div>
         {mode === 'initial' && <div className="assessment-area-track" aria-label="Movement check areas">{foundationAreas.map((area, index) => <span className={index < currentAreaIndex ? 'complete' : index === currentAreaIndex ? 'active' : ''} key={area.id}><i aria-hidden="true">{index < currentAreaIndex ? '✓' : index + 1}</i>{area.label}</span>)}</div>}
         <div className="assessment-layout">

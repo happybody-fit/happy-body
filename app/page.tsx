@@ -128,7 +128,7 @@ export default function Home() {
   if (!ready) return <main className="loading-shell"><span className="result-flower">✦</span><p>Preparing your Happy Body…</p></main>;
   if (!data.profile.onboardingCompleted && !data.preferences.welcomeSeen) return <><Welcome begin={beginOnboarding} signIn={() => setShowAccount(true)} />{showAccount && <AccountDialog sync={sync} close={() => setShowAccount(false)} />}</>;
   if (!data.profile.onboardingCompleted) return <Onboarding initial={data.profile} onComplete={completeOnboarding} onBackToWelcome={data.profile.onboardingCompletedAt ? undefined : () => setData((current) => ({ ...current, preferences: { ...current.preferences, welcomeSeen: false }, updatedAt: new Date().toISOString() }))} />;
-  if (assessment) return <AssessmentFlow data={data} mode={assessment.mode} pathwayId={assessment.pathwayId} onResult={saveAssessmentResult} onClose={() => { setAssessment(null); setScreen('today'); }} />;
+  if (assessment) return <AssessmentFlow data={data} mode={assessment.mode} pathwayId={assessment.pathwayId} onResult={saveAssessmentResult} onClose={(destination = 'today') => { setAssessment(null); setScreen(destination); }} />;
 
   return (
     <main className="app-shell">
