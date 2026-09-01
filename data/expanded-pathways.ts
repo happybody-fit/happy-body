@@ -1,4 +1,5 @@
 import type { EquipmentId, GoalId, Pathway, PathwayId } from '@/lib/types';
+import { getExerciseVideoSource } from './exercise-videos';
 
 type StepSeed = {
   id: string;
@@ -31,7 +32,10 @@ type PathwaySeed = {
 };
 
 function buildPathway(seed: PathwaySeed): Pathway {
-  const levels = seed.steps.map((step, index) => ({
+  const levels = seed.steps.map((step, index) => {
+    const videoSource = getExerciseVideoSource(step.id);
+
+    return ({
     id: step.id,
     title: step.title,
     description: step.purpose,
@@ -56,11 +60,12 @@ function buildPathway(seed: PathwaySeed): Pathway {
       regressWhen: index ? `Return to ${seed.steps[index - 1].title.toLowerCase()} when this range or load cannot stay calm and controlled.` : 'Use more support, less range, or a shorter effort.',
       progressWhen: index < seed.steps.length - 1 ? `Explore ${seed.steps[index + 1].title.toLowerCase()} after several comfortable practices at this step.` : 'Keep this capability through regular, comfortable practice.',
       cautions: [step.caution ?? 'Stop if you feel sharp, worsening or unexplained pain.'],
-      videoId: '',
-      videoStatus: 'placeholder' as const,
+      videoId: videoSource?.videoId ?? '',
+      videoStatus: videoSource?.status ?? 'placeholder' as const,
       educationId: 'steadiness-and-ease',
     }],
-  }));
+    });
+  });
 
   return {
     id: seed.id,

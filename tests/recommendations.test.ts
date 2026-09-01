@@ -4,6 +4,7 @@ import { getRecommendations } from '@/lib/recommendations';
 import { getTodaySessionPlan } from '@/lib/session-plan';
 import { createDefaultData, migrateLegacyProgress, parseImportedData } from '@/lib/storage';
 import { pathways } from '@/data/pathways';
+import { exerciseVideoLibrary } from '@/data/exercise-videos';
 import type { LegacyUserProgress, PathwayId } from '@/lib/types';
 
 function readyData() {
@@ -159,6 +160,8 @@ test('the whole-body map contains eight strength and eight mobility pathways', (
     const exerciseIds = pathway.levels.flatMap((level) => level.exercises.map((exercise) => exercise.id));
     assert.equal(new Set(exerciseIds).size, exerciseIds.length, `${pathway.name} exercise ids should be unique`);
     pathway.levels.flatMap((level) => level.exercises).forEach((exercise) => {
+      assert.ok(exercise.videoId, `${exercise.title} should have a demonstration video`);
+      assert.equal(exercise.videoId, exerciseVideoLibrary[exercise.id]?.videoId, `${exercise.title} should use the central video catalog`);
       exercise.alternatives.forEach((alternative) => assert.ok(exerciseIds.includes(alternative), `${exercise.title} should reference a real alternative`));
     });
   });
