@@ -1,5 +1,6 @@
 import type { AssessmentCheckpoint, EquipmentId, Exercise, MetricKind, Pathway, PathwayId, ProgressionLevel } from '@/lib/types';
 import { expandedPathways } from './expanded-pathways';
+import { exerciseVideoLibrary } from './exercise-videos';
 
 type ExerciseSeed = {
   id: string;
@@ -60,10 +61,13 @@ function checkpoint(id: string, title: string, instruction: string, levelIndex: 
   };
 }
 
-const squatVideo = 'qgugh6l0zeU';
-const supportedSitToStandVideo = '9JVaSIUPqxU';
-const pushVideo = 'J2vaGZ7wSco';
-const pullVideo = 'B_VkNQS5YLs';
+// Do not reuse one generic clip across several different progressions. Videos
+// are added exercise by exercise as they are reviewed or recorded.
+const noVideoYet = '';
+const squatVideo = noVideoYet;
+const pushVideo = noVideoYet;
+const pullVideo = noVideoYet;
+const supportedSitToStandVideo = exerciseVideoLibrary['supported-sit-to-stand'];
 
 const originalPathways: Pathway[] = [
   {
@@ -80,7 +84,7 @@ const originalPathways: Pathway[] = [
     destination: 'Pistol squat',
     goalIds: ['move-comfortably', 'build-strength', 'natural-movement', 'pistol-squat'],
     levels: [
-      level('supported-sit-to-stand', 'Supported sit-to-stand', 'Use your hands or a stable support to make standing feel secure.', 'Stand from a firm seat five times with steady feet.', exercise({ id: 'supported-sit-to-stand', title: 'Supported sit-to-stand', purpose: 'Build everyday leg strength with as much support as you need.', equipment: ['chair'], sets: 2, reps: '5–8', cues: ['Place both feet comfortably under you.', 'Use the chair or your hands only as much as needed.', 'Stand tall, then sit down quietly.'], videoId: supportedSitToStandVideo, videoStatus: 'approved' })),
+      level('supported-sit-to-stand', 'Supported sit-to-stand', 'Use your hands or a stable support to make standing feel secure.', 'Stand from a firm seat five times with steady feet.', exercise({ id: 'supported-sit-to-stand', title: 'Supported sit-to-stand', purpose: 'Build everyday leg strength with as much support as you need.', equipment: ['chair'], sets: 2, reps: '5–8', cues: ['Place both feet comfortably under you.', 'Use the chair or your hands only as much as needed.', 'Stand tall, then sit down quietly.'], videoId: supportedSitToStandVideo.videoId, videoStatus: supportedSitToStandVideo.status })),
       level('chair-squat', 'Chair squat', 'Use a chair as a clear, reassuring depth target.', 'Complete ten quiet chair squats without dropping onto the seat.', exercise({ id: 'chair-squat', title: 'Chair squat', purpose: 'Practise a smooth squat with a reliable target.', equipment: ['chair'], sets: 2, reps: '6–10', cues: ['Send your hips back towards the chair.', 'Touch down lightly instead of collapsing.', 'Press through your whole foot to stand.'], videoId: squatVideo })),
       level('supported-deep-squat', 'Supported deep squat', 'Use hand support to explore a deeper, comfortable position.', 'Breathe calmly for 30 seconds at your comfortable depth.', exercise({ id: 'supported-deep-squat', title: 'Supported deep squat', purpose: 'Explore depth, ankle movement and ease with adjustable support.', equipment: ['chair'], sets: 3, hold: '15–30 sec', cues: ['Hold something stable.', 'Keep your heels supported.', 'Choose a depth where breathing remains easy.'], videoId: squatVideo })),
       level('bodyweight-squat', 'Bodyweight squat', 'Squat freely through the range you can control today.', 'Complete ten balanced bodyweight squats.', exercise({ id: 'bodyweight-squat', title: 'Bodyweight squat', purpose: 'Build coordinated leg and trunk strength.', sets: 3, reps: '6–10', cues: ['Use the stance that lets your hips move freely.', 'Keep pressure across your whole foot.', 'Stand without rushing.'], videoId: squatVideo })),
