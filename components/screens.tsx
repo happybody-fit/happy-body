@@ -7,21 +7,23 @@ import { getExerciseVideoSource } from '@/data/exercise-videos';
 import { findExercise, pathwayById, pathways } from '@/data/pathways';
 import { getTodaySessionPlan } from '@/lib/session-plan';
 import { parseImportedData } from '@/lib/storage';
-import type { BodyState, EquipmentId, Exercise, GoalId, HappyBodyData, PathwayId, Recommendation, ScreenId, UserProfile } from '@/lib/types';
+import type { BodyState, EquipmentId, Exercise, GoalId, HappyBodyData, PathwayId, PracticeEntry, Recommendation, ScreenId, UserProfile } from '@/lib/types';
 import { PathwayAnatomy } from './pathway-anatomy';
+import { GuidedPracticeDialog } from './guided-practice-dialog';
 import { formatDate, localDate, PageIntro, PainNote } from './shared';
-import { WarmUpDialog } from './warm-up-dialog';
 
 export function TodayScreen({
   data,
   navigate,
   saveCheckIn,
+  savePracticeSession,
   openPractice,
   startAssessment,
 }: {
   data: HappyBodyData;
   navigate: (screen: ScreenId) => void;
   saveCheckIn: (bodyState: BodyState, minutes: number) => void;
+  savePracticeSession: (entries: PracticeEntry[]) => void;
   openPractice: (recommendation: Recommendation | null) => void;
   startAssessment: (pathwayId?: PathwayId) => void;
 }) {
@@ -29,7 +31,7 @@ export function TodayScreen({
   const checkIn = data.dailyCheckIns.find((item) => item.date === today);
   const [bodyState, setBodyState] = useState<BodyState>(checkIn?.bodyState ?? 'steady');
   const [minutes, setMinutes] = useState(checkIn?.minutes ?? data.profile.defaultMinutes);
-  const [showWarmUp, setShowWarmUp] = useState(false);
+  const [showGuidedPractice, setShowGuidedPractice] = useState(false);
   const session = useMemo(() => getTodaySessionPlan(data, today), [data, today]);
   const recommendations = session.recommendations;
   const name = data.profile.name.trim();
@@ -43,6 +45,7 @@ export function TodayScreen({
   const timeFitLabel = session.totalMinutes && session.totalMinutes < availableMinutes
     ? `${session.totalMinutes} min within the ${availableMinutes} min you have`
     : session.totalMinutes ? `Uses the ${availableMinutes} min you chose` : 'There is no required duration';
+  const guidedMovementCount = recommendations.filter((item) => item.minutes > 0).length;
 
   const openRecommendation = (item: Recommendation) => {
     if (item.kind === 'practice') openPractice(item);
@@ -87,29 +90,26 @@ export function TodayScreen({
           </div>
         </div>
 
-        <div className="today-plan-card">
-          <div className="today-plan-heading"><div><p className="eyebrow">TODAY’S SESSION</p><h2>{session.totalMinutes ? `A complete ${session.totalMinutes}-minute practice` : 'Choose what feels useful today'}</h2></div><span>{timeFitLabel}</span></div>
-          <div className="today-plan-list">
-            {session.warmUpMinutes > 0 && <article className="today-session-phase phase-prepare"><span className="today-step-number">01</span><div><small>PREPARE · {session.warmUpMinutes} MIN</small><h3>Warm up for today’s movements</h3><p>We’ll begin with gentle whole-body movement, then prepare the joints and muscles you’ll use.</p></div></article>}
-            {session.practiceMinutes > 0 && <div className="today-session-divider"><span>02</span><div><small>PRACTISE · {session.practiceMinutes} MIN</small><strong>{planCountLabel.replace('Prepare + ', '')}</strong></div></div>}
-            {recommendations.map((item, index) => (
-              <article className={`today-plan-step kind-${item.kind}`} key={item.id}>
-                <span className="today-movement-number">{index + 1}</span>
-                <div>
-                  <small>{recommendationKindLabel(item.kind)}{item.minutes ? ` · ${item.minutes} min` : ''}</small>
-                  <h3>{item.title}</h3>
-                  <p>{item.reason}</p>
-                  <span>{item.detail}</span>
-                </div>
-              </article>
-            ))}
-            {session.finishMinutes > 0 && <article className="today-session-phase phase-finish"><span className="today-step-number">03</span><div><small>FINISH · {session.finishMinutes} MIN</small><h3>Let your breathing settle</h3><p>Move easily, slow down, and notice how your body feels before you record the practice.</p></div></article>}
+        <div className="today-plan-card today-visual-plan">
+          <div className="today-plan-heading today-plan-hero">
+            <div><p className="eyebrow">TODAY’S SESSION</p><h2>{session.totalMinutes ? `A complete ${session.totalMinutes}-minute practice` : 'Choose what feels useful today'}</h2><p>{timeFitLabel}. Follow the session one movement at a time, with each demonstration and instruction close at hand.</p></div>
+            {firstRecommendation && session.totalMinutes > 0 && <button className="primary-button today-begin-button" onClick={() => setShowGuidedPractice(true)}>Begin practice <span>→</span></button>}
+          </div>
+          <div className="today-session-rhythm" aria-label="Session structure">
+            {session.warmUpMinutes > 0 && <span style={{ flexGrow: session.warmUpMinutes }}><i className="prepare" /><small>Prepare</small><strong>{session.warmUpMinutes} min</strong></span>}
+            {session.practiceMinutes > 0 && <span style={{ flexGrow: session.practiceMinutes }}><i className="practise" /><small>Practise</small><strong>{session.practiceMinutes} min</strong></span>}
+            {session.finishMinutes > 0 && <span style={{ flexGrow: session.finishMinutes }}><i className="finish" /><small>Finish</small><strong>{session.finishMinutes} min</strong></span>}
+          </div>
+          <div className="today-visual-list">
+            {session.warmUpMinutes > 0 && <button type="button" className="today-phase-card prepare" onClick={() => setShowGuidedPractice(true)}><span className="today-phase-art"><i>↗</i></span><span className="today-phase-copy"><small>PREPARE · {session.warmUpMinutes} MIN</small><strong>Warm up for today’s movements</strong><em>Gentle whole-body movement, followed by preparation for the areas you’ll use.</em></span><b aria-hidden="true">→</b></button>}
+            {recommendations.map((item, index) => <TodayMovementCard key={item.id} item={item} index={index} open={() => openRecommendation(item)} />)}
+            {session.finishMinutes > 0 && <button type="button" className="today-phase-card finish" onClick={() => setShowGuidedPractice(true)}><span className="today-phase-art"><i>○</i></span><span className="today-phase-copy"><small>FINISH · {session.finishMinutes} MIN</small><strong>Let your breathing settle</strong><em>Move easily, slow down, and notice how your body feels before you finish.</em></span><b aria-hidden="true">→</b></button>}
           </div>
           <div className="today-plan-actions">
-            {firstRecommendation && <button className="primary-button" onClick={() => session.warmUpMinutes ? setShowWarmUp(true) : openRecommendation(firstRecommendation)}>{session.warmUpMinutes ? 'Begin with your warm-up' : recommendationActionLabel(firstRecommendation.kind)} →</button>}
+            {firstRecommendation && session.totalMinutes > 0 && <button className="primary-button" onClick={() => setShowGuidedPractice(true)}>Begin my {session.totalMinutes}-minute practice →</button>}
             <div className="today-plan-other-actions"><button className="text-button" onClick={() => navigate('explore')}>Choose something different</button><span>·</span><button className="text-button" onClick={() => openPractice(null)}>Record something else</button></div>
           </div>
-          <p className="today-plan-reassurance">Every practice includes guidance for making the movement easier or knowing when you may be ready for more.</p>
+          <p className="today-plan-reassurance">{guidedMovementCount} guided {guidedMovementCount === 1 ? 'step' : 'steps'} · videos, instructions and a quick log are included.</p>
         </div>
       </section>
 
@@ -118,8 +118,33 @@ export function TodayScreen({
         <div className="quiet-card recent-card"><p className="eyebrow">RECENT PRACTICE</p><h2>{data.practices.length ? 'Continue from where you left off.' : 'Your practice history starts here.'}</h2>{data.practices.length ? data.practices.slice(0, 2).map((entry) => <div className="mini-event" key={entry.id}><span>{entry.completion === 'yes' ? '✓' : '◌'}</span><div><strong>{entry.exerciseTitle}</strong><small>{formatDate(entry.date)} · felt {entry.difficulty}</small></div></div>) : <p>Once you complete or record a practice, it will appear here for an easy return.</p>}<button className="text-button" onClick={() => navigate('diary')}>Open my diary →</button></div>
       </section>
       <PainNote />
-      {showWarmUp && <WarmUpDialog plan={session} close={() => setShowWarmUp(false)} continueSession={(item) => { setShowWarmUp(false); openRecommendation(item); }} />}
+      {showGuidedPractice && <GuidedPracticeDialog plan={session} close={() => setShowGuidedPractice(false)} openRecommendation={(item) => { setShowGuidedPractice(false); openRecommendation(item); }} complete={(entries) => { setShowGuidedPractice(false); savePracticeSession(entries); }} />}
     </>
+  );
+}
+
+function TodayMovementCard({ item, index, open }: { item: Recommendation; index: number; open: () => void }) {
+  const found = item.exerciseId ? findExercise(item.exerciseId) : null;
+  const pathway = item.pathwayId ? pathwayById[item.pathwayId] : null;
+  const video = found ? getExerciseVideoSource(found.exercise.id) : null;
+  const action = item.kind === 'practice' ? 'Watch & practise' : recommendationActionLabel(item.kind);
+  return (
+    <button type="button" className={`today-movement-card kind-${item.kind}`} onClick={open}>
+      <span className={`today-movement-media ${video ? 'has-video' : 'no-video'}`}>
+        {video ? <>
+          {/* eslint-disable-next-line @next/next/no-img-element -- remote YouTube thumbnail */}
+          <img src={`https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg`} alt="" />
+          <i className="today-play-icon" aria-hidden="true">▶</i>
+        </> : <i className="today-movement-symbol" aria-hidden="true">{pathway?.symbol ?? '◎'}</i>}
+        <small>{item.minutes ? `${item.minutes} min` : 'Optional'}</small>
+      </span>
+      <span className="today-movement-copy">
+        <span className="today-movement-meta"><small>{String(index + 1).padStart(2, '0')} · {pathway?.name ?? recommendationKindLabel(item.kind)}</small>{pathway && <em>{pathway.category}</em>}</span>
+        <strong>{item.title}</strong>
+        <span>{item.detail}</span>
+        <b>{action} →</b>
+      </span>
+    </button>
   );
 }
 

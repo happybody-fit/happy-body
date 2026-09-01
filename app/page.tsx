@@ -115,6 +115,29 @@ export default function Home() {
     setToast(entry.completion === 'not-today' ? 'Not today is useful information. Saved to your diary.' : 'Practice saved. Notice what changes over time.');
   };
 
+  const savePracticeSession = (entries: PracticeEntry[]) => {
+    if (!entries.length) {
+      setToast('Practice finished. Nothing was recorded today.');
+      return;
+    }
+    setData((current) => {
+      const movementStates = { ...current.movementStates };
+      let painFlags = [...current.painFlags];
+      entries.forEach((entry) => {
+        if (!entry.pathwayId) return;
+        const currentState = movementStates[entry.pathwayId];
+        const pain = entry.bodyAfter === 'pain';
+        movementStates[entry.pathwayId] = {
+          ...(currentState ?? { movementId: entry.pathwayId, currentLevel: null, outcome: null, assessedAt: null, reassessAfter: null, note: '' }),
+          status: pain ? 'pain-flagged' : currentState?.currentLevel !== null && currentState?.currentLevel !== undefined ? 'in-progress' : 'unknown',
+        };
+        if (pain) painFlags = [{ id: uid(), movementId: entry.movementId, bodyArea: entry.exerciseTitle, note: entry.notes, createdAt: entry.date, active: true }, ...painFlags];
+      });
+      return { ...current, practices: [...entries, ...current.practices], movementStates, painFlags, updatedAt: new Date().toISOString() };
+    });
+    setToast(`${entries.length} ${entries.length === 1 ? 'movement' : 'movements'} saved to your diary.`);
+  };
+
   const saveCheckIn = (bodyState: BodyState, minutes: number) => {
     const date = localDate();
     setData((current) => ({ ...current, dailyCheckIns: [{ date, bodyState, minutes }, ...current.dailyCheckIns.filter((item) => item.date !== date)], updatedAt: new Date().toISOString() }));
@@ -134,7 +157,7 @@ export default function Home() {
     <main className="app-shell">
       <Header screen={screen} data={data} sync={sync} navigate={navigate} openAccount={() => setShowAccount(true)} />
       <div className="app-page">
-        {screen === 'today' && <TodayScreen data={data} navigate={navigate} saveCheckIn={saveCheckIn} openPractice={setPractice} startAssessment={startAssessment} />}
+        {screen === 'today' && <TodayScreen data={data} navigate={navigate} saveCheckIn={saveCheckIn} savePracticeSession={savePracticeSession} openPractice={setPractice} startAssessment={startAssessment} />}
         {screen === 'progress' && <ProgressScreen data={data} startAssessment={startAssessment} openPathway={openPathway} />}
         {screen === 'explore' && <ExploreScreen data={data} initialPathwayId={explorePathwayId} updateProfile={updateProfile} startAssessment={startAssessment} openPractice={setPractice} />}
         {screen === 'diary' && <DiaryScreen data={data} openPractice={setPractice} />}

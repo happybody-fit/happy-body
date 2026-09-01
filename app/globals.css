@@ -298,6 +298,49 @@ legend small { margin-left: 5px; color: var(--muted); font-weight: 500; text-tra
 .today-plan-other-actions { display: flex; gap: 8px; align-items: center; color: var(--muted); }
 .today-plan-other-actions .text-button { padding: 2px 0; font-size: 9px; }
 .today-plan-reassurance { margin: 14px 0 0; color: var(--muted); font-size: 8px; line-height: 1.5; }
+.today-visual-plan { overflow: hidden; padding: 0; }
+.today-plan-hero { align-items: center; padding: 30px 30px 24px; background: linear-gradient(120deg, rgba(220,231,216,.72), rgba(255,253,248,.75) 62%, rgba(235,227,207,.62)); }
+.today-plan-hero h2 { max-width: 620px; font-size: clamp(29px, 3.4vw, 42px); }
+.today-plan-hero p:not(.eyebrow) { max-width: 650px; margin: 10px 0 0; color: var(--ink-2); font-size: 11px; line-height: 1.55; }
+.today-begin-button { flex: 0 0 auto; min-width: 180px; min-height: 50px; }
+.today-begin-button span { margin-left: 15px; }
+.today-session-rhythm { display: flex; gap: 5px; padding: 18px 30px 16px; border-bottom: 1px solid var(--line); }
+.today-session-rhythm > span { min-width: 80px; display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; }
+.today-session-rhythm i { grid-column: 1 / -1; height: 6px; border-radius: 999px; background: var(--sage); }
+.today-session-rhythm i.practise { background: var(--moss); }
+.today-session-rhythm i.finish { background: var(--sand); }
+.today-session-rhythm small { color: var(--muted); font-size: 7px; font-style: normal; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+.today-session-rhythm strong { font-size: 8px; }
+.today-visual-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; padding: 24px 30px 5px; }
+.today-phase-card, .today-movement-card { width: 100%; min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 19px; background: var(--white); text-align: left; transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+.today-phase-card:hover, .today-movement-card:hover { transform: translateY(-2px); border-color: rgba(76,107,82,.35); box-shadow: 0 13px 30px rgba(36,56,47,.08); }
+.today-phase-card { grid-column: 1 / -1; display: grid; grid-template-columns: 94px minmax(0, 1fr) auto; gap: 18px; align-items: center; padding: 13px 17px 13px 13px; }
+.today-phase-card.finish { background: #faf7ef; }
+.today-phase-art { position: relative; min-height: 72px; display: grid; place-items: center; overflow: hidden; border-radius: 13px; background: linear-gradient(135deg, #d9e6d5, #edf2e8); }
+.today-phase-card.finish .today-phase-art { background: linear-gradient(135deg, #eee4cf, #faf6ec); }
+.today-phase-art::before { content: ''; position: absolute; width: 72px; height: 72px; right: -22px; top: -31px; border: 1px solid rgba(76,107,82,.18); border-radius: 50%; }
+.today-phase-art i { color: var(--moss); font: 27px Georgia, serif; font-style: normal; }
+.today-phase-copy { min-width: 0; display: grid; gap: 4px; }
+.today-phase-copy small { color: var(--moss); font-size: 7px; font-weight: 850; letter-spacing: .1em; }
+.today-phase-copy strong { font: 20px Georgia, serif; letter-spacing: -.02em; }
+.today-phase-copy em { overflow: hidden; color: var(--muted); font-size: 9px; font-style: normal; line-height: 1.45; text-overflow: ellipsis; }
+.today-phase-card > b { color: var(--moss); font-size: 16px; }
+.today-movement-card { display: grid; grid-template-columns: minmax(145px, .85fr) minmax(0, 1.15fr); padding: 0; color: var(--ink); }
+.today-movement-media { position: relative; min-height: 155px; overflow: hidden; display: grid; place-items: center; background: linear-gradient(140deg, #dce7d8, #ebe3cf); }
+.today-movement-media img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: cover; }
+.today-movement-media.has-video::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 52%, rgba(19,31,25,.42)); }
+.today-play-icon { position: relative; z-index: 2; width: 46px; height: 46px; display: grid; place-items: center; padding-left: 3px; border: 1px solid rgba(255,255,255,.7); border-radius: 50%; background: rgba(255,253,248,.9); color: var(--ink); font-size: 13px; font-style: normal; box-shadow: 0 8px 22px rgba(22,34,28,.18); }
+.today-movement-symbol { color: var(--moss); font: 40px Georgia, serif; font-style: normal; }
+.today-movement-media > small { position: absolute; z-index: 3; left: 10px; bottom: 9px; padding: 5px 8px; border-radius: 999px; background: rgba(255,253,248,.92); color: var(--ink); font-size: 7px; font-weight: 850; }
+.today-movement-copy { min-width: 0; display: grid; align-content: center; gap: 7px; padding: 17px; }
+.today-movement-meta { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.today-movement-meta small { color: var(--moss); font-size: 7px; font-weight: 850; letter-spacing: .07em; text-transform: uppercase; }
+.today-movement-meta em { padding: 4px 6px; border-radius: 999px; background: var(--sage-2); color: var(--moss); font-size: 6px; font-style: normal; font-weight: 800; text-transform: uppercase; }
+.today-movement-copy > strong { font: 21px Georgia, serif; line-height: 1.12; letter-spacing: -.025em; }
+.today-movement-copy > span:not(.today-movement-meta) { color: var(--muted); font-size: 9px; line-height: 1.45; }
+.today-movement-copy > b { margin-top: 2px; color: var(--moss); font-size: 8px; }
+.today-visual-plan .today-plan-actions { padding: 22px 30px 0; }
+.today-visual-plan .today-plan-reassurance { padding: 0 30px 27px; }
 .segmented-control { display: flex; padding: 4px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); }
 .segmented-control button { flex: 1; border: 0; border-radius: 10px; padding: 8px 9px; background: transparent; color: var(--muted); font-size: 10px; font-weight: 750; text-transform: capitalize; }
 .segmented-control button.active { background: var(--white); color: var(--ink); box-shadow: 0 3px 12px rgba(36,56,47,.08); }
@@ -379,6 +422,68 @@ legend small { margin-left: 5px; color: var(--muted); font-weight: 500; text-tra
 .dialog-backdrop { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 18px; background: rgba(28,42,35,.54); backdrop-filter: blur(7px); }
 .practice-dialog { width: min(700px, 100%); max-height: calc(100vh - 36px); overflow: auto; padding: 30px; border-radius: 28px; background: var(--white); box-shadow: 0 28px 90px rgba(22,34,28,.27); }
 .practice-guide { width: min(820px, 100%); }
+.guided-practice-backdrop { padding: 22px; }
+.guided-practice-dialog { width: min(860px, 100%); max-height: calc(100svh - 44px); overflow: auto; border-radius: 27px; background: var(--paper); box-shadow: 0 30px 100px rgba(22,34,28,.3); }
+.guided-practice-bar { position: sticky; z-index: 5; top: 0; display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 16px 22px 13px; background: rgba(255,253,248,.96); backdrop-filter: blur(13px); }
+.guided-practice-bar p { margin-bottom: 3px; }
+.guided-practice-bar strong { font-size: 11px; }
+.guided-practice-bar > button { width: 39px; height: 39px; flex: 0 0 auto; border: 1px solid var(--line); border-radius: 50%; background: var(--white); font-size: 22px; }
+.guided-progress { position: sticky; z-index: 6; top: 68px; height: 4px; background: rgba(36,56,47,.1); }
+.guided-progress i { height: 100%; display: block; border-radius: 0 999px 999px 0; background: var(--sun); transition: width .25s ease; }
+.guided-step-body, .guided-reflection { padding: 34px 38px 38px; }
+.guided-step-heading { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 20px; align-items: center; padding: 22px; border-radius: 22px; background: var(--sage-2); }
+.guided-step-heading h2 { margin: 4px 0 8px; font-size: clamp(32px, 4vw, 46px); }
+.guided-step-heading p:last-child { max-width: 610px; margin: 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
+.guided-phase-symbol { width: 74px; height: 74px; display: grid; place-items: center; border-radius: 50%; background: var(--white); color: var(--moss); font: 30px Georgia, serif; }
+.guided-phase-symbol.finish { background: #f4ead8; }
+.guided-warm-up-list { margin: 23px 0 0; padding: 0; list-style: none; }
+.guided-warm-up-list li { display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 16px; padding: 17px 4px; border-bottom: 1px solid var(--line); }
+.guided-warm-up-list li > span { align-self: start; padding: 7px 5px; border-radius: 999px; background: var(--white); color: var(--moss); font-size: 8px; font-weight: 850; text-align: center; }
+.guided-warm-up-list h3 { margin: 0 0 5px; font-size: 19px; }
+.guided-warm-up-list p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
+.guided-actions { display: flex; justify-content: space-between; gap: 14px; align-items: center; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line); }
+.guided-actions > div { display: flex; gap: 15px; align-items: center; }
+.guided-video-frame { width: 100%; aspect-ratio: 16/9; overflow: hidden; background: var(--ink); }
+.guided-video-frame iframe { width: 100%; height: 100%; display: block; border: 0; }
+.guided-movement-content { padding: 18px 38px 36px; }
+.guided-video-source { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 18px; color: var(--muted); font-size: 8px; }
+.guided-video-source a { color: var(--moss); font-weight: 800; }
+.guided-movement-heading { display: flex; justify-content: space-between; gap: 20px; align-items: start; }
+.guided-movement-heading h2 { margin: 3px 0 6px; font-size: clamp(35px, 4.6vw, 53px); }
+.guided-movement-heading > span { flex: 0 0 auto; padding: 6px 9px; border-radius: 999px; background: var(--sage); color: var(--moss); font-size: 7px; font-weight: 850; text-transform: uppercase; }
+.guided-movement-purpose { max-width: 680px; margin: 0; color: var(--ink-2); font-size: 12px; line-height: 1.6; }
+.guided-dose { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0; }
+.guided-dose div { padding: 15px; border: 1px solid var(--line); border-radius: 15px; background: var(--white); }
+.guided-dose small, .guided-dose strong { display: block; }
+.guided-dose small { margin-bottom: 5px; color: var(--muted); font-size: 7px; letter-spacing: .1em; }
+.guided-dose strong { font-size: 12px; }
+.guided-instructions { padding: 23px; border-radius: 21px; background: var(--moss); color: white; }
+.guided-instructions .eyebrow { color: var(--sun); }
+.guided-instructions ol { margin: 12px 0 0; padding-left: 22px; }
+.guided-instructions li { padding: 5px 0 5px 6px; color: rgba(255,255,255,.9); font-size: 11px; line-height: 1.5; }
+.guided-instructions li::marker { color: var(--sun); font-weight: 850; }
+.guided-more { margin-top: 14px; border: 1px solid var(--line); border-radius: 15px; background: var(--white); }
+.guided-more summary { padding: 14px 16px; font-size: 10px; font-weight: 800; }
+.guided-more > div { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0 14px 14px; }
+.guided-more p { margin: 0; padding: 13px; border-radius: 12px; background: var(--paper); color: var(--muted); font-size: 9px; line-height: 1.48; }
+.guided-more strong { display: block; margin-bottom: 5px; color: var(--ink); }
+.guided-finish-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 22px; }
+.guided-finish-grid article { min-height: 155px; padding: 18px; border: 1px solid var(--line); border-radius: 17px; background: var(--white); }
+.guided-finish-grid span { width: 28px; height: 28px; display: grid; place-items: center; margin-bottom: 25px; border-radius: 50%; background: var(--sand); color: var(--moss); font-size: 8px; font-weight: 850; }
+.guided-finish-grid strong { display: block; font: 18px Georgia, serif; }
+.guided-finish-grid p { margin: 7px 0 0; color: var(--muted); font-size: 9px; line-height: 1.5; }
+.guided-action-card { display: grid; justify-items: start; gap: 11px; margin-top: 22px; padding: 22px; border: 1px solid var(--line); border-radius: 19px; background: var(--white); }
+.guided-action-card strong { font: 20px Georgia, serif; }
+.guided-action-card p { margin: 0 0 6px; color: var(--muted); font-size: 10px; line-height: 1.55; }
+.guided-reflection { max-width: 700px; min-height: 570px; margin: 0 auto; display: grid; align-content: center; text-align: center; }
+.guided-complete-mark { width: 70px; height: 70px; display: grid; place-items: center; margin: 0 auto 20px; border-radius: 50%; background: var(--moss); color: white; font-size: 26px; }
+.guided-reflection h2 { margin: 3px 0 10px; font-size: clamp(38px, 5vw, 55px); }
+.guided-reflection > p:not(.eyebrow) { margin: 0 auto 22px; color: var(--muted); font-size: 11px; }
+.guided-feeling-options { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.guided-feeling-options button { min-height: 55px; border: 1px solid var(--line); border-radius: 14px; background: var(--white); font-size: 10px; font-weight: 800; }
+.guided-feeling-options button.selected { border-color: var(--moss); background: var(--moss); color: white; }
+.guided-session-note { display: grid; gap: 8px; margin-top: 18px; text-align: left; font-size: 10px; font-weight: 800; }
+.guided-reflection-actions { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
 .dialog-heading { display: flex; justify-content: space-between; gap: 20px; align-items: start; margin-bottom: 20px; padding-bottom: 17px; border-bottom: 1px solid var(--line); }.dialog-heading h2 { margin: 0; }.dialog-heading > button { width: 39px; height: 39px; flex: 0 0 auto; border: 1px solid var(--line); border-radius: 50%; background: var(--white); font-size: 22px; }
 .warm-up-dialog { width: min(720px, 100%); }
 .warm-up-intro { display: grid; grid-template-columns: auto 1fr; gap: 15px; align-items: center; padding: 17px; border-radius: 16px; background: var(--sage-2); }
@@ -437,6 +542,8 @@ legend small { margin-left: 5px; color: var(--muted); font-weight: 500; text-tra
   .settings-grid { grid-template-columns: 1fr; }.settings-card { min-height: 0; }
   .dialog-backdrop { padding: 0; align-items: end; }.practice-dialog { width: 100%; max-height: 94vh; padding: 23px 17px; border-radius: 24px 24px 0 0; }.warm-up-actions { display: grid; grid-template-columns: 1fr; }.warm-up-actions .primary-button { grid-row: 1; width: 100%; }.warm-up-actions .secondary-button { width: 100%; }.self-choice-fields, .practice-prescription, .guidance-grid, .form-grid { grid-template-columns: 1fr; }.four-choices { grid-template-columns: repeat(2, 1fr); }.quick-log-heading { align-items: start; gap: 10px; }.toast { left: 13px; right: 13px; bottom: 82px; text-align: center; }
   .exercise-video-backdrop { padding: 0; }.exercise-video-dialog { max-height: 100svh; min-height: 100svh; border-radius: 0; }.exercise-detail-bar { padding: 13px 16px; }.exercise-detail-bar strong { font-size: 11px; }.exercise-detail-body { padding: 16px 16px max(30px, env(safe-area-inset-bottom)); }.temporary-video-note { align-items: start; margin-bottom: 17px; }.temporary-video-note span, .temporary-video-note a { font-size: 7px; }.exercise-detail-heading h2 { font-size: 32px; }.exercise-dose { grid-template-columns: 1fr 1fr; }.exercise-dose > div:last-child { grid-column: 1 / -1; }.exercise-guidance-card { padding: 20px 17px; }.exercise-more-guidance > div { grid-template-columns: 1fr; }.exercise-detail-actions { display: grid; }.exercise-detail-actions .primary-button { width: 100%; }.practice-video-note { display: grid; gap: 4px; }
+  .today-plan-hero { padding: 24px 18px 20px; }.today-plan-hero h2 { font-size: 31px; }.today-plan-hero p:not(.eyebrow) { font-size: 10px; }.today-begin-button { width: 100%; }.today-session-rhythm { padding: 15px 18px 14px; }.today-session-rhythm > span { min-width: 56px; }.today-session-rhythm small { font-size: 6px; }.today-session-rhythm strong { font-size: 7px; }.today-visual-list { grid-template-columns: 1fr; gap: 12px; padding: 18px 14px 2px; }.today-phase-card { grid-template-columns: 64px minmax(0, 1fr) auto; gap: 12px; padding: 10px 12px 10px 10px; }.today-phase-art { min-height: 70px; }.today-phase-copy strong { font-size: 17px; }.today-phase-copy em { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }.today-movement-card { grid-template-columns: 142px minmax(0, 1fr); }.today-movement-media { min-height: 154px; }.today-movement-copy { gap: 6px; padding: 13px 12px; }.today-movement-meta em { display: none; }.today-movement-copy > strong { font-size: 18px; }.today-movement-copy > span:not(.today-movement-meta) { font-size: 8px; }.today-visual-plan .today-plan-actions { padding: 20px 16px 0; }.today-visual-plan .today-plan-reassurance { padding: 0 16px 23px; }
+  .guided-practice-backdrop { padding: 0; }.guided-practice-dialog { width: 100%; max-height: 100svh; min-height: 100svh; border-radius: 0; }.guided-practice-bar { padding: 12px 15px 10px; }.guided-progress { top: 61px; }.guided-step-body, .guided-reflection { padding: 23px 16px max(28px, env(safe-area-inset-bottom)); }.guided-step-heading { grid-template-columns: 1fr; gap: 13px; padding: 19px 17px; }.guided-step-heading h2 { font-size: 34px; }.guided-phase-symbol { width: 54px; height: 54px; font-size: 24px; }.guided-warm-up-list li { grid-template-columns: 50px minmax(0, 1fr); gap: 12px; padding: 15px 2px; }.guided-actions { align-items: end; }.guided-actions > div { display: grid; justify-items: end; gap: 10px; }.guided-actions .primary-button { min-width: 190px; }.guided-movement-content { padding: 15px 16px max(30px, env(safe-area-inset-bottom)); }.guided-video-source { display: grid; gap: 3px; margin-bottom: 14px; }.guided-movement-heading h2 { font-size: 37px; }.guided-movement-purpose { font-size: 11px; }.guided-dose { grid-template-columns: 1fr 1fr; }.guided-instructions { padding: 20px 17px; }.guided-more > div { grid-template-columns: 1fr; }.guided-finish-grid { grid-template-columns: 1fr; }.guided-finish-grid article { min-height: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 13px; }.guided-finish-grid span { grid-row: 1 / span 2; margin: 0; }.guided-reflection { min-height: calc(100svh - 65px); }.guided-feeling-options { grid-template-columns: repeat(6, 1fr); }.guided-feeling-options button { grid-column: span 2; }.guided-feeling-options button:nth-child(n+4) { grid-column: span 3; }.guided-reflection-actions { display: grid; }.guided-reflection-actions .primary-button { grid-row: 1; }
 }
 
 @media (max-width: 720px) {
