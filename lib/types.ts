@@ -175,6 +175,12 @@ export interface PracticeEntry {
   notes: string;
   videoUrl: string;
   source: 'recommendation' | 'self-chosen';
+  recordedBy?: {
+    kind: 'coach';
+    coachId: string;
+    coachName: string;
+    recordedAt: string;
+  };
 }
 
 export interface AssessmentRecord {
