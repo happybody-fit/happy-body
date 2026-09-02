@@ -29,6 +29,7 @@ type PathwaySeed = {
   goalIds: GoalId[];
   steps: StepSeed[];
   assessmentLevels: number[];
+  branches?: NonNullable<Pathway['branches']>;
 };
 
 function buildPathway(seed: PathwaySeed): Pathway {
@@ -81,6 +82,7 @@ function buildPathway(seed: PathwaySeed): Pathway {
     destination: seed.destination,
     goalIds: seed.goalIds,
     levels,
+    branches: seed.branches,
     assessment: seed.assessmentLevels.map((levelIndex, index) => {
       const step = seed.steps[levelIndex];
       const attempt = step.hold ? 'one comfortable 10–15 second hold' : 'up to three controlled repetitions';
@@ -126,6 +128,10 @@ const strengthPathways: PathwaySeed[] = [
   {
     id: 'core', name: 'Core', longName: 'Whole-body core pathway', category: 'Strength', focus: 'Core', focusLabel: 'core control', primaryGoal: 'core-control', symbol: 'C', tone: 'peach',
     description: 'Build a connected centre from calm floor control towards the dragon flag.', destination: 'Dragon flag', goalIds: ['move-comfortably', 'build-strength', 'core-control', 'dragon-flag'], assessmentLevels: [0, 2, 4],
+    branches: [
+      { id: 'trunk-control', title: 'Trunk control', description: 'Build whole-body tension and controlled spinal movement towards a dragon flag.', primary: true, levelIds: ['core-march', 'dead-bug', 'tuck-hollow-hold', 'hollow-body-hold', 'reverse-curl', 'candlestick-lower', 'tuck-dragon-flag', 'dragon-flag'] },
+      { id: 'compression-hanging', title: 'Compression and hanging core', description: 'Bring the legs towards the trunk with control, then hold that shape while hanging.', relatedPathwayIds: ['pike', 'pull-up'], levelIds: ['seated-compression-lift', 'hanging-knee-raise', 'hanging-straight-leg-raise', 'hanging-tuck-l-sit', 'hanging-l-sit'] },
+    ],
     steps: [
       { id: 'core-march', title: 'Alternating core march', purpose: 'Coordinate the trunk and legs while the floor provides feedback.', sets: 2, reps: '5–8 / side', cues: ['Keep both feet close to you.', 'Lift one foot without rocking.', 'Breathe out gently as the foot rises.'] },
       { id: 'dead-bug', title: 'Dead bug extension', purpose: 'Control opposite arm and leg movement through a comfortable range.', sets: 3, reps: '4–8 / side', cues: ['Begin with knees above the hips.', 'Reach only as far as the trunk stays quiet.', 'Return slowly before changing sides.'] },
@@ -135,11 +141,20 @@ const strengthPathways: PathwaySeed[] = [
       { id: 'candlestick-lower', title: 'Candlestick lower', purpose: 'Practise lowering a connected body shape with progressively longer levers.', sets: 3, reps: '3–6', cues: ['Begin with hips lifted and hands supporting if needed.', 'Lower one section at a time.', 'Tuck the knees whenever control fades.'] },
       { id: 'tuck-dragon-flag', title: 'Tuck dragon-flag lower', purpose: 'Introduce dragon-flag loading with the knees tucked.', equipment: ['box-bench'], sets: 4, reps: '2–5', cues: ['Hold a truly stable bench behind your head.', 'Keep the knees tucked.', 'Lower only through the range you can reverse.'], caution: 'Do not pull on an unstable object or load the neck.' },
       { id: 'dragon-flag', title: 'Dragon flag', purpose: 'Express advanced whole-body trunk strength with a long lever.', equipment: ['box-bench'], sets: 4, reps: '1–4', cues: ['Anchor the hands to a stable bench.', 'Keep the body connected from shoulders to feet.', 'Use a partial range before control is complete.'], caution: 'This is an advanced movement; avoid loading the neck and use coaching if unsure.' },
+      { id: 'seated-compression-lift', title: 'Seated compression lift', purpose: 'Learn to lift the legs using active hip and trunk compression.', sets: 3, reps: '5–8 lifts', cues: ['Sit tall with the hands beside the thighs.', 'Lift one or both heels without leaning back.', 'Use a small range and keep breathing.'] },
+      { id: 'hanging-knee-raise', title: 'Hanging knee raise', purpose: 'Build hanging core strength with the knees bent.', equipment: ['pull-up-bar'], sets: 3, reps: '5–10', cues: ['Begin from an active, comfortable hang.', 'Bring the knees up without swinging.', 'Lower slowly before the next repetition.'] },
+      { id: 'hanging-straight-leg-raise', title: 'Hanging straight-leg raise', purpose: 'Increase compression demand by lengthening the legs.', equipment: ['pull-up-bar'], sets: 3, reps: '3–8', cues: ['Keep the shoulders organised.', 'Lift only through the range you control.', 'Avoid using momentum to chase height.'] },
+      { id: 'hanging-tuck-l-sit', title: 'Hanging tuck L-sit', purpose: 'Hold a compact L-sit shape while hanging from the bar.', equipment: ['pull-up-bar'], sets: 4, hold: '8–20 sec', cues: ['Draw the knees towards the chest.', 'Keep the hang quiet.', 'End the hold before the grip or trunk position changes.'] },
+      { id: 'hanging-l-sit', title: 'Hanging L-sit', purpose: 'Express strong compression with straight legs in a controlled hang.', equipment: ['pull-up-bar'], sets: 4, hold: '8–25 sec', cues: ['Set the shoulders before lifting the legs.', 'Reach the legs forward without swinging.', 'Lower with the same control used to lift.'], caution: 'Use a secure bar and stop before grip fatigue makes the exit uncertain.' },
     ],
   },
   {
     id: 'vertical-push', name: 'Vertical push', longName: 'Vertical push pathway', category: 'Strength', focus: 'Upper body', focusLabel: 'overhead pushing strength', primaryGoal: 'handstand-push-up', symbol: 'V', tone: 'sage',
-    description: 'Build overhead strength from supported pike work towards a controlled handstand push-up.', destination: 'Handstand push-up', goalIds: ['build-strength', 'handstand-push-up', 'wall-handstand', 'handstand'], assessmentLevels: [0, 2, 4],
+    description: 'Build overhead pressing and dip strength through two complementary pushing branches.', destination: 'Strong overhead press and dip', goalIds: ['build-strength', 'handstand-push-up', 'wall-handstand', 'handstand'], assessmentLevels: [0, 2, 4],
+    branches: [
+      { id: 'overhead-press', title: 'Overhead strength', description: 'Progress from supported pike work towards a controlled handstand push-up.', primary: true, levelIds: ['incline-pike-hold', 'pike-shoulder-tap', 'pike-push-up', 'elevated-pike-push-up', 'wall-handstand-hold', 'partial-wall-hspu', 'wall-hspu', 'handstand-push-up'] },
+      { id: 'dip-support', title: 'Dip and support strength', description: 'Build stable straight-arm support and controlled dipping strength.', relatedPathwayIds: ['push-up'], levelIds: ['parallel-bar-support-hold', 'feet-assisted-dip', 'band-assisted-dip', 'negative-dip', 'parallel-bar-dip', 'ring-dip'] },
+    ],
     steps: [
       { id: 'incline-pike-hold', title: 'Incline pike hold', purpose: 'Introduce overhead hand support with the feet grounded.', equipment: ['box-bench'], sets: 3, hold: '10–20 sec', cues: ['Use a sturdy raised surface for the hands.', 'Send the hips back and up.', 'Press the surface away without shrugging.'] },
       { id: 'pike-shoulder-tap', title: 'Incline pike weight shift', purpose: 'Move bodyweight towards the hands without bending the elbows deeply.', equipment: ['box-bench'], sets: 3, reps: '5–8 shifts', cues: ['Keep the surface stable.', 'Shift forward only through a comfortable shoulder angle.', 'Move back before the wrists feel overloaded.'] },
@@ -149,6 +164,12 @@ const strengthPathways: PathwaySeed[] = [
       { id: 'partial-wall-hspu', title: 'Partial wall handstand push-up', purpose: 'Add a small controlled elbow bend in an organised wall handstand.', equipment: ['wall'], sets: 4, reps: '2–5', cues: ['Begin in a stable wall-supported position.', 'Lower only a few centimetres at first.', 'Keep enough energy to exit safely.'], caution: 'Do not practise alone if you cannot reliably exit the handstand.' },
       { id: 'wall-hspu', title: 'Wall handstand push-up', purpose: 'Build a full controlled vertical press with wall balance.', equipment: ['wall'], sets: 4, reps: '1–5', cues: ['Use a consistent hand position.', 'Lower under control without collapsing onto the head.', 'Stop before the exit becomes uncertain.'], caution: 'This advanced inverted press is best learned with qualified coaching.' },
       { id: 'handstand-push-up', title: 'Freestanding handstand push-up', purpose: 'Combine vertical pressing strength with freestanding balance.', sets: 4, reps: '1–3', cues: ['Attempt only with a reliable freestanding handstand.', 'Keep the lowering path controlled.', 'Use a safe, open practice area.'], caution: 'This is an advanced skill; use qualified coaching and a safe exit strategy.' },
+      { id: 'parallel-bar-support-hold', title: 'Parallel-bar support hold', purpose: 'Build stable straight-arm support before adding a dip.', equipment: ['dip-bars'], sets: 3, hold: '10–30 sec', cues: ['Use bars that cannot move.', 'Press tall through straight arms.', 'Step down before the shoulders lose their position.'] },
+      { id: 'feet-assisted-dip', title: 'Feet-assisted dip', purpose: 'Learn the dip path while the feet control how much weight the arms carry.', equipment: ['dip-bars', 'box-bench'], sets: 3, reps: '5–10', cues: ['Keep the support stable.', 'Use the feet as much as needed.', 'Lower only through a comfortable shoulder range.'] },
+      { id: 'band-assisted-dip', title: 'Band-assisted dip', purpose: 'Practise a full dip with adjustable band assistance.', equipment: ['dip-bars', 'resistance-band'], sets: 4, reps: '3–8', cues: ['Secure the band evenly to the bars.', 'Begin from a strong support.', 'Lower and press without bouncing from the band.'], caution: 'Check the band and dip station before every set.' },
+      { id: 'negative-dip', title: 'Negative dip', purpose: 'Build dip strength through a slow controlled lowering phase.', equipment: ['dip-bars', 'box-bench'], sets: 4, reps: '2–5', cues: ['Step into the top support position.', 'Lower for three to five seconds.', 'Use the feet to return to the top.'] },
+      { id: 'parallel-bar-dip', title: 'Parallel-bar dip', purpose: 'Express controlled vertical pushing strength through a comfortable dip range.', equipment: ['dip-bars'], sets: 4, reps: '2–8', cues: ['Begin with steady straight-arm support.', 'Let the elbows track back as you lower.', 'Press to the top without losing shoulder control.'], caution: 'Use only a pain-free depth; do not force the shoulders below the range you control.' },
+      { id: 'ring-dip', title: 'Ring dip', purpose: 'Add greater stability demand to an already strong dip.', equipment: ['rings'], sets: 4, reps: '1–5', cues: ['Use rings only after parallel-bar dips feel repeatable.', 'Keep the rings close to the body.', 'Move slowly enough to prevent the rings drifting apart.'], caution: 'Ring dips are an advanced progression with high stability demand.' },
     ],
   },
   {

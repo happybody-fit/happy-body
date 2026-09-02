@@ -55,6 +55,7 @@ export type EquipmentId =
   | 'resistance-band'
   | 'pull-up-bar'
   | 'rings'
+  | 'dip-bars'
   | 'box-bench'
   | 'secure-anchor';
 
@@ -131,6 +132,15 @@ export interface ProgressionLevel {
   exercises: Exercise[];
 }
 
+export interface PathwayBranch {
+  id: string;
+  title: string;
+  description: string;
+  levelIds: string[];
+  relatedPathwayIds?: PathwayId[];
+  primary?: boolean;
+}
+
 export interface Pathway {
   id: PathwayId;
   name: string;
@@ -145,6 +155,7 @@ export interface Pathway {
   destination: string;
   goalIds: GoalId[];
   levels: ProgressionLevel[];
+  branches?: PathwayBranch[];
   assessment: AssessmentCheckpoint[];
 }
 
@@ -153,6 +164,7 @@ export interface MovementState {
   status: MovementStatus;
   outcome: AssessmentOutcome | null;
   currentLevel: number | null;
+  branchLevels?: Record<string, string>;
   assessedAt: string | null;
   reassessAfter: string | null;
   note: string;
@@ -192,6 +204,7 @@ export interface AssessmentRecord {
   checkpointTitle: string;
   outcome: AssessmentOutcome;
   levelIndex: number | null;
+  branchId?: string | null;
   note: string;
 }
 

@@ -23,6 +23,13 @@ const exerciseVideoSeeds: Record<string, ExerciseVideoSeed> = {
   'box-pistol-squat': ['kc4YfSHjbYE', 'Buff Dudes'],
   'assisted-pistol-squat': ['vq5-vdgJc0I', 'Squat University'],
   'pistol-squat': ['vq5-vdgJc0I', 'Squat University'],
+  'split-squat': ['ZnzK-dozi-g', 'Physiotherapy Exercises'],
+  'assisted-bulgarian-split-squat': ['rah3eJCPXHA', 'Bulgarian split squat tutorial'],
+  'bulgarian-split-squat': ['rah3eJCPXHA', 'Bulgarian split squat tutorial'],
+  'supported-lateral-squat': ['gfod3jiMgl4', 'Zack Henderson'],
+  'assisted-cossack-squat': ['gfod3jiMgl4', 'Zack Henderson'],
+  'cossack-squat': ['gfod3jiMgl4', 'Zack Henderson'],
+  'cossack-transitions': ['gfod3jiMgl4', 'Zack Henderson'],
 
   // Knee-flexion strength
   'heel-dig-hold': ['5zFwQVgaCLk', 'The Doctors of Physical Therapy'],
@@ -51,6 +58,11 @@ const exerciseVideoSeeds: Record<string, ExerciseVideoSeed> = {
   'candlestick-lower': ['T_X5rb3G5lk', 'Renaissance Periodization'],
   'tuck-dragon-flag': ['Kz6e7J9UHKg', 'Moving Athlete'],
   'dragon-flag': ['pvz7k5gO-DE', 'FitnessFAQs'],
+  'seated-compression-lift': ['Y52Yv57UJ_8', 'Minus The Gym'],
+  'hanging-knee-raise': ['gBu16ijqpEg', 'Minus The Gym'],
+  'hanging-straight-leg-raise': ['gBu16ijqpEg', 'Minus The Gym'],
+  'hanging-tuck-l-sit': ['Y52Yv57UJ_8', 'Minus The Gym'],
+  'hanging-l-sit': ['Y52Yv57UJ_8', 'Minus The Gym'],
 
   // Horizontal push strength
   'wall-push-up': ['wIPJvBQs7RA', 'Hinge Health'],
@@ -73,6 +85,12 @@ const exerciseVideoSeeds: Record<string, ExerciseVideoSeed> = {
   'partial-wall-hspu': ['2fY3DHUZLOs', 'FitnessFAQs'],
   'wall-hspu': ['2fY3DHUZLOs', 'FitnessFAQs'],
   'handstand-push-up': ['CeBXMRsTR3w', 'CrossFit Invictus'],
+  'parallel-bar-support-hold': ['eLI7t-5wHno', 'Strength Project'],
+  'feet-assisted-dip': ['l41SoWZiowI', 'FitnessFAQs'],
+  'band-assisted-dip': ['l41SoWZiowI', 'FitnessFAQs'],
+  'negative-dip': ['l41SoWZiowI', 'FitnessFAQs'],
+  'parallel-bar-dip': ['l41SoWZiowI', 'FitnessFAQs'],
+  'ring-dip': ['l41SoWZiowI', 'FitnessFAQs'],
 
   // Horizontal pull strength
   'standing-band-row': ['WkNuYbWZ8g8', 'Whats Up Dude'],

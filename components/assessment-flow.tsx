@@ -117,6 +117,7 @@ export function AssessmentFlow({
     else status = 'assessed';
 
     const state: MovementState = {
+      ...data.movementStates[movementId],
       movementId,
       status,
       outcome,
@@ -174,6 +175,7 @@ export function AssessmentFlow({
     else if (outcome !== 'pain') currentLevel = fallbackLevel;
 
     const state: MovementState = {
+      ...data.movementStates[pathway.id],
       movementId: pathway.id,
       status,
       outcome,
